@@ -404,7 +404,7 @@ it's available in the original Japanese, as well as English and Vietnamese trans
         Vih = Vbe + Ibsat*Rb;
 
         Ioh = (Vcc - Voh)/Rc1;//sourse current
-        Iol = (Vcc - Vcesat)/Rc1; //sink current
+        Iol = Icsat * (kSat1 - 1); //sink current
 
         Iih = (Voh - Vbe)/(Rb+Rc1);
 
