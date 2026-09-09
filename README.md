@@ -28,7 +28,7 @@ resistor (R_b) a gate needs, together with all of its electrical parameters.
 |---------|------------------------------------|
 | `Vcc`   | Supply voltage                     |
 | `Rc`    | Collector resistor                 |
-| `hFE`   | Transistor DC current gain (beta)  |
+| `Beta`   | Transistor DC current gain (beta)  |
 | `k`     | Base overdrive / saturation factor |
 | `FOreq` | Required fan-out                   |
 
@@ -130,7 +130,7 @@ XANDcalc — консольный инженерный калькулятор **
 |-------------|-------------------------------------------------|
 | `Vcc`       | Напряжение питания                              |
 | `Rc`        | Коллекторный резистор                           |
-| `hFE`       | Коэффициент усиления транзистора по току (beta) |
+| `Beta`       | Коэффициент усиления транзистора по току (beta) |
 | `k`         | Коэффициент перегрузки/насыщения базы           |
 | `FOreq`     | Требуемый fan-out (разветвление по выходу)      |
 
