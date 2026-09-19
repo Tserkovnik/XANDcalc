@@ -115,7 +115,6 @@ static class Vars
         new Parameter("NmH",     0, "V",   "out"),
         new Parameter("V_be",    0, "V",   "out"),
         new Parameter("V_ce_sat", 0, "V",  "out"),
-        new Parameter("V_in_calc", 0, "V", "out"),
     ];
 
     #region ПСЕВДОНИМЫ ДЛЯ РЕЗУЛЬТАТОВ
@@ -308,11 +307,105 @@ static class ConsoleExtensions
 }
 #endregion
 
+#region Класс для txtшек
+static class ProjectFile
+{
+    // Папка всех проектов: Документы/XANDprojects
+    public static string Folder =>
+        System.IO.Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+            "XANDprojects");
+
+    // Из имени, введённого пользователем, делаем полный путь
+    public static string Resolve(string name)
+    {
+        if (!name.EndsWith(".txt", StringComparison.OrdinalIgnoreCase)) name += ".txt";
+        if (System.IO.Path.IsPathRooted(name)) return name;   // абсолютный путь — не спорим
+        return System.IO.Path.Combine(Folder, name);
+    }
+
+    public static void Save(string path)
+    {
+        System.IO.Directory.CreateDirectory(Folder);   // создать, если нет
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("# XANDcalc project");
+        sb.AppendLine("# version 1");
+        sb.AppendLine($"# saved {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+        sb.AppendLine($"VinAuto = {VinAuto}");
+        foreach (var p in Vars.Parameters)
+            sb.AppendLine($"{p.Name} = {p.Value.ToString("R", System.Globalization.CultureInfo.InvariantCulture)}");
+        sb.AppendLine("# --- results at save time (info only) ---");
+        foreach (var o in Vars.Outputs)
+            sb.AppendLine($"# {o.Name} = {o.Value.ToString("R", System.Globalization.CultureInfo.InvariantCulture)} {o.Unit}");
+        System.IO.File.WriteAllText(path, sb.ToString());
+    }
+
+    public static int Load(string path)   // возвращает, сколько значений применилось
+    {
+        int n = 0;
+        foreach (var raw in System.IO.File.ReadAllLines(path))
+        {
+            string line = raw.Trim();
+            if (line.Length == 0 || line.StartsWith("#")) continue;
+            int eq = line.IndexOf('=');
+            if (eq < 0) continue;
+            string name = line[..eq].Trim();
+            string val  = line[(eq + 1)..].Trim();
+
+            if (name == "VinAuto") { if (bool.TryParse(val, out bool b)) VinAuto = b; continue; }
+
+            var p = Array.Find(Vars.Parameters, x => x.Name == name);
+            if (p == null) continue;                       // имя из новой версии — пропускаем
+            double v;
+            bool ok = double.TryParse(val, System.Globalization.NumberStyles.Float,
+                         System.Globalization.CultureInfo.InvariantCulture, out v)
+                   || double.TryParse(val, System.Globalization.NumberStyles.Float,
+                         System.Globalization.CultureInfo.CurrentCulture, out v);
+            if (ok) { p.Value = v; n++; }
+        }
+        return n;
+    }
+}
+
+#endregion
 
 
 class XANDcalc {
 
     static bool logo = true;   
+
+#region Для сейвов и чтения
+        static string AskName(string def)
+    {
+        $"Project name [{def}]: ".Print(line: false);
+        string s = Console.ReadLine()?.Trim() ?? "";
+        return s == "" ? def : s;
+    }
+
+    static void SaveProject()
+    {
+        try
+        {
+            string path = ProjectFile.Resolve(AskName("project"));
+            ProjectFile.Save(path);
+            $"Saved to {path}".Print(Green);
+        }
+        catch (System.Exception e) { $"Save failed: {e.Message}".Print(Red); }
+    }
+
+    static void LoadProject()
+    {
+        try
+        {
+            string path = ProjectFile.Resolve(AskName("project"));
+            int n = ProjectFile.Load(path);
+            $"Loaded {n} values from {path}".Print(Green);
+        }
+        catch (System.IO.FileNotFoundException) { "File not found in XANDprojects.".Print(Red); }
+        catch (System.Exception e) { $"Load failed: {e.Message}".Print(Red); }
+    }
+
+#endregion
 
     static void Main()
     {
@@ -331,6 +424,8 @@ class XANDcalc {
             logo = false;
             Console.WriteLine("\n0. Exit/Stop");
             Console.WriteLine("1. NOT gate");
+            "2. Save project".Print();
+            "3. Load project".Print();
 
             Console.Write("\nInput: ");
 
@@ -357,6 +452,20 @@ class XANDcalc {
                 
                 case "1": case "not": 
                     NOTchoice();
+                    break;
+
+                case "2": case "save":
+                    Console.Clear();
+                    LogoMain();
+                    "\n".Print();
+                    SaveProject();
+                    break;
+
+                case "3": case "load": 
+                    Console.Clear();
+                    LogoMain();
+                    "\n".Print();
+                    LoadProject();
                     break;
 
                 case "echo":

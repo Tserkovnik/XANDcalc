@@ -61,7 +61,6 @@ NM_H     = V_OH − V_IH        NM_L = V_IL − V_OL
 FO       = floor( I_OH / I_IH )
 ```
 
-> Note: V_in is taken as 0.9 · V_CC — a deliberate design assumption, not the maximum.
 
 ### Controls
 
@@ -71,6 +70,7 @@ FO       = floor( I_OH / I_IH )
 | `0`        | one step back (exit at first) |
 | `x` / `q`  | exit to the main menu         |
 | `Enter`    | skip, keep the current value  |
+| `a`        | auto Vin                      |
 
 ### How to run
 
@@ -163,7 +163,6 @@ NM_H     = V_OH − V_IH        NM_L = V_IL − V_OL
 FO       = floor( I_OH / I_IH )
 ```
 
-> Примечание: V_in принимается равным 0.9 · V_CC — осознанное проектное допущение, а не максимум.
 
 ### Управление
 
@@ -173,6 +172,7 @@ FO       = floor( I_OH / I_IH )
 | `0`             | шаг назад (на первом — выход)         |
 | `x` / `q` / `ч` | выход в главное меню                  |
 | `Enter`         | пропустить, оставить текущее значение |
+| `a`             | автоматический Vin                    |
 
 ### Как запустить
 
