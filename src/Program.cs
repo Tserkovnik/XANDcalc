@@ -4,7 +4,7 @@ using static Vars; // чтоб писать удобнее, vars БОЛЬШЕ Н
 using System.Linq;  // для .Where()
 using static ConsoleExtensions;
 
-enum ReadResult { Number, Back, Exit, Retry, Skip }
+enum ReadResult { Number, Back, Exit, Retry, Skip, Auto }
 
 #region ЦЕНТРАЛЬНАЯ БАЗА ПАРАМЕТРОВ, КОНСТАНТ И РЕЗУЛЬТАТОВ
 
@@ -56,6 +56,7 @@ static class Vars
     public static readonly Parameter[] Parameters = [
         new Parameter("Vcc", 5.0, "V", "all"),
         new Parameter("Required Fan-Out", 8, "Natural number", "all"),
+        new Parameter("Vin", 5.0, "V", "all"),
         
         // Транзистор 1
         new Parameter("Rc1", 470, "Ohm", "t1"),
@@ -70,27 +71,30 @@ static class Vars
 
     // ХРАНИЛИЩЕ ДЛЯ ТАБЛИЦЫ РЕЗУЛЬТАТОВ (Сюда складываем строки расчетов для разных FO)
     public static System.Collections.Generic.List<CalculationRow> ResultsTable = new();
+    public static bool VinAuto = true;
 
     #region ПСЕВДОНИМЫ ДЛЯ ПОЛНЫХ ОБЪЕКТОВ (чтобы удобно брать .Name и .Unit при выводе)
     public static Parameter P_Vcc   => Parameters[0];
     public static Parameter P_FOreq => Parameters[1];
-    public static Parameter P_Rc1   => Parameters[2];
-    public static Parameter P_Beta1 => Parameters[3];
-    public static Parameter P_kSat1 => Parameters[4];
-    public static Parameter P_Rc2   => Parameters[5];
-    public static Parameter P_Beta2 => Parameters[6];
-    public static Parameter P_kSat2 => Parameters[7];
+    public static Parameter P_Vin => Parameters[2];
+    public static Parameter P_Rc1   => Parameters[3];
+    public static Parameter P_Beta1 => Parameters[4];
+    public static Parameter P_kSat1 => Parameters[5];
+    public static Parameter P_Rc2   => Parameters[6];
+    public static Parameter P_Beta2 => Parameters[7];
+    public static Parameter P_kSat2 => Parameters[8];
     #endregion
 
     #region ПСЕВДОНИМЫ ДЛЯ МАТЕМАТИКИ (Чтобы в формулах работать просто со значениями типа double)
     public static double Vcc    { get => Parameters[0].Value; set => Parameters[0].Value = value; }
     public static double FOreq  { get => Parameters[1].Value; set => Parameters[1].Value = value; }
-    public static double Rc1    { get => Parameters[2].Value; set => Parameters[2].Value = value; }
-    public static double Beta1  { get => Parameters[3].Value; set => Parameters[3].Value = value; }
-    public static double kSat1  { get => Parameters[4].Value; set => Parameters[4].Value = value; }
-    public static double Rc2    { get => Parameters[5].Value; set => Parameters[5].Value = value; }
-    public static double Beta2  { get => Parameters[6].Value; set => Parameters[6].Value = value; }
-    public static double kSat2  { get => Parameters[7].Value; set => Parameters[7].Value = value; }
+    public static double Vin   { get => Parameters[2].Value; set => Parameters[2].Value = value; }
+    public static double Rc1    { get => Parameters[3].Value; set => Parameters[3].Value = value; }
+    public static double Beta1  { get => Parameters[4].Value; set => Parameters[4].Value = value; }
+    public static double kSat1  { get => Parameters[5].Value; set => Parameters[5].Value = value; }
+    public static double Rc2    { get => Parameters[6].Value; set => Parameters[6].Value = value; }
+    public static double Beta2  { get => Parameters[7].Value; set => Parameters[7].Value = value; }
+    public static double kSat2  { get => Parameters[8].Value; set => Parameters[8].Value = value; }
     #endregion
 
     // РЕЗУЛЬТАТЫ (пишет Calculate, читает отрисовка)
@@ -101,13 +105,17 @@ static class Vars
         new Parameter("V_ih",    0, "V",   "out"),
         new Parameter("I_c",     0, "A",   "out"),
         new Parameter("I_b",     0, "A",   "out"),
-        new Parameter("V_in",    0, "V",   "out"),
+        new Parameter("V_in_calc", 0, "V", "out"),
         new Parameter("I_oh",    0, "A",   "out"),
         new Parameter("I_ol",    0, "A",   "out"),
+        new Parameter("I_ol_spare", 0, "A", "out"),
         new Parameter("I_ih",    0, "A",   "out"),
         new Parameter("Fan-Out", 0, "",    "out"),
         new Parameter("NmL",     0, "V",   "out"),
         new Parameter("NmH",     0, "V",   "out"),
+        new Parameter("V_be",    0, "V",   "out"),
+        new Parameter("V_ce_sat", 0, "V",  "out"),
+        new Parameter("V_in_calc", 0, "V", "out"),
     ];
 
     #region ПСЕВДОНИМЫ ДЛЯ РЕЗУЛЬТАТОВ
@@ -117,19 +125,23 @@ static class Vars
     public static double Vih   { get => Outputs[3].Value;  set => Outputs[3].Value = value; }
     public static double Icsat { get => Outputs[4].Value;  set => Outputs[4].Value = value; }
     public static double Ibsat { get => Outputs[5].Value;  set => Outputs[5].Value = value; }
-    public static double Vin   { get => Outputs[6].Value;  set => Outputs[6].Value = value; }
+    public static double VinCalc { get => Outputs[6].Value; set => Outputs[6].Value = value; }
     public static double Ioh   { get => Outputs[7].Value;  set => Outputs[7].Value = value; }
     public static double Iol   { get => Outputs[8].Value;  set => Outputs[8].Value = value; }
     public static double Iih   { get => Outputs[9].Value;  set => Outputs[9].Value = value; }
     public static int    FO    { get => (int)Outputs[10].Value; set => Outputs[10].Value = value; }
     public static double NmL   { get => Outputs[11].Value; set => Outputs[11].Value = value; }
     public static double NmH   { get => Outputs[12].Value; set => Outputs[12].Value = value; }
+    public static double Vbe      { get => Outputs[13].Value; set => Outputs[13].Value = value; }
+    public static double Vcesat   { get => Outputs[14].Value; set => Outputs[14].Value = value; }
+    public static double IolSpare { get => Outputs[15].Value; set => Outputs[15].Value = value; }
 
     #endregion
 
     #region КОНСТАНТЫ СХЕМОТЕХНИКИ
-    public const double Vbe    = 0.7;
-    public const double Vcesat = 0.2;
+    public const double Vt = 0.025;      // тепловое напряжение
+    public const double Is = 5.47e-12;   // ток насыщения
+    public const double Rs = 0.1;        // омическое сопротивление выводов
     public const double Vil    = 0.5;
     public const double Iil    = 15e-9;
     #endregion
@@ -194,6 +206,7 @@ static class ConsoleExtensions
         if (s == "0")  return ReadResult.Back;       // код "назад"
         if (s == "x" || s == "q" || s == "ч") return ReadResult.Exit; // код "выход"
         if (s == "") return ReadResult.Skip;
+        if (s == "a" || s == "auto" || s == "ф") return ReadResult.Auto; 
 
         if (double.TryParse(s, out value))           // получилось число?
         {
@@ -270,6 +283,28 @@ static class ConsoleExtensions
         Border('└', '┴', '┘');
     }
 
+    // Хард: значение бессмысленно -> переспросить
+    public static string HardLimit(string name, double v)
+    {
+        if ((name == "kSat1" || name == "kSat2") && v <= 1)
+            return "k <= 1: no base overdrive — no saturation, the transistor is not a switch. Enter k > 1";
+        if (name == "Required Fan-Out" && v < 1)
+            return "Fan-Out < 1 makes no sense. Enter a natural number";
+        return null;
+    }
+
+    // Софт: допустимо, но подозрительно -> принять с предупреждением
+    public static string SoftWarn(string name, double v)
+    {
+        if ((name == "Beta1" || name == "Beta2") && (v < 5 || v > 100))
+            return "Note: Create: Power Grid clamps gain to 5..100";
+        if ((name == "Rc1" || name == "Rc2") && v < 100)
+            return "Warning: very small Rc — huge current and power";
+        if (name == "Vin" && v > Vcc)
+            return "Warning: input high is above supply Vcc — check your level shifting";
+        return null;
+    }
+
 }
 #endregion
 
@@ -335,6 +370,10 @@ it's available in the original Japanese, as well as English and Vietnamese trans
 (though I don't actually speak English myself).");
                     break;
 
+                case "qwen":
+                    "\nThank you\n".Print();
+                    break;
+
             }
         }
     }
@@ -351,16 +390,29 @@ it's available in the original Japanese, as well as English and Vietnamese trans
         {
             var p = filteredParams[step];
             string back = step == 0 ? "0=exit" : "0=back";
-            string prompt = $"{p.Name} [{p.Unit}] (now {p.Value})  [{back}]: ";
+            string now = (p.Name == "Vin" && VinAuto) ? $"{p.Value}, auto" : $"{p.Value}";
+            string prompt = $"{p.Name} [{p.Unit}] (now {now})  [{back}]: ";
 
             switch (ReadNumber(prompt, out double v))
             {
                 case ReadResult.Number:
+                {
+                    string err = HardLimit(p.Name, v);
+                    if (err != null) { err.Print(Red); break; }   // переспрос, step не двигаем
+                    string warn = SoftWarn(p.Name, v);
+                    if (warn != null) warn.Print(Yellow);
+                    if (p.Name == "Vcc" && VinAuto) Vin = v;      // авто включено — Vin едет за Vcc
+                    if (p.Name == "Vin") VinAuto = false;         // взяли вручную — авто выкл
                     p.Value = v;
                     step++;
                     break;
+                }
+                case ReadResult.Auto:
+                    if (p.Name == "Vin") { VinAuto = true; Vin = Vcc; step++; }
+                    else "auto is available for Vin only".Print(Yellow);
+                    break;
                 case ReadResult.Back:
-                    if (step == 0) return;   //выход из режима
+                    if (step == 0) return;
                     step--;
                     ClearLastLine();
                     ClearLastLine();
@@ -368,7 +420,7 @@ it's available in the original Japanese, as well as English and Vietnamese trans
                 case ReadResult.Exit:
                     return;
                 case ReadResult.Retry:
-                    break;                   // просто переспросить
+                    break;
                 case ReadResult.Skip:
                     step++;
                     break;
@@ -384,17 +436,24 @@ it's available in the original Japanese, as well as English and Vietnamese trans
 
         //РАСЧЁТЫ!
 
-        //№1 у нас по сути уже есть параметры, в том числе выбранный Rc
+        //модель транзистора (Ebers-Moll)
+        if (kSat1 <= 1) { "k must be > 1 for saturation!".Print(Red); return; }
 
-        //№2 Ток коллектора
-        Icsat = (Vcc - Vcesat)/Rc1;
+        double betaR = Math.Max(0.5, Beta1 * 0.1);   // обратный β
+
+        Vcesat = Vt * Math.Log((Beta1 / betaR + kSat1 * (1 + 1 / betaR)) / (kSat1 - 1));
+
+        Icsat = (Vcc - Vcesat) / Rc1;
+
+        double Ie = Icsat * (1 + 1 / Beta1);
+        Vbe = Vt * Math.Log(Icsat / Is + 1) + Ie * Rs;   // Шокли + омическая добавка
 
         //№3 Ток базы, мин
         Ibsat = Icsat/Beta1*kSat1;
 
         //№4 Базовый резистор
-        Vin = Vcc * 0.9; //просто чтобы брать не макс значение.
-        Rb = (Vin - Vbe)/Ibsat - Rc1*FOreq;
+        VinCalc = Vin * 0.9;
+        Rb = (VinCalc - Vbe)/Ibsat - Rc1*FOreq;
 
         //ПАРАМЕТРЫ гейта под нагрузкой
 
@@ -404,7 +463,10 @@ it's available in the original Japanese, as well as English and Vietnamese trans
         Vih = Vbe + Ibsat*Rb;
 
         Ioh = (Vcc - Voh)/Rc1;//sourse current
-        Iol = Icsat * (kSat1 - 1); //sink current
+
+        Iol = (Vcc - Vcesat) / Rc1;      // РЕАЛЬНЫЙ ток стока в "0" (= Icsat)
+        IolSpare = Icsat * (kSat1 - 1);  // ЗАПАС: сколько ещё можно слить, оставаясь в насыщении
+    
 
         Iih = (Voh - Vbe)/(Rb+Rc1);
 
@@ -434,15 +496,21 @@ it's available in the original Japanese, as well as English and Vietnamese trans
         $"Beta = {Beta1}".Print();
         $"k = {kSat1}\n".Print();
 
+        $"V_in = {Vin:0.00}V".Print(Cyan);
+        $"V_in calc = {VinCalc:0.00}V (-10%)\n".Print(DarkGray);
+
+        $"V_be = {Vbe:0.00}V".Print();
+        $"V_ce(sat) = {Vcesat:0.00}V\n".Print();
+
         $"I_c = {Icsat.FormatCurrent()}".Print();
         $"I_b = {Ibsat.FormatCurrent()}\n".Print();
 
         PrintLoadTable();
 
         $"\nI_ol = {Iol.FormatCurrent()}".Print();
+        $"I_ol spare = {IolSpare.FormatCurrent()}".Print();
         $"I_il = {Iil.FormatCurrent()}\n".Print();
 
-        $"V_in = {Vin:0.00}V".Print();
         $"V_ol = {Vol:0.00}V".Print(Vol >= Vil ? Red : null);
         $"V_ih = {Vih:0.00}V".Print(Vih >= Voh ? Red : null);
         $"V_il = {Vil:0.00}V\n".Print(Vol >= Vil ? Red : null);
