@@ -1,0 +1,8 @@
+dotnet run — быстрая разработка: консольный ввод имён файлов (фолбэк), собирается везде.
+
+dotnet run -r win-x64 — прогнать версию с диалогами, не выходя из разработки.
+
+dotnet publish src -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true -o publish/win-x64 — релизный 
+exe с диалогами.
+
+... -r linux-x64 ... -o publish/linux-x64 — linux-бинарник с консольным вводом, WinForms даже не упоминается.
