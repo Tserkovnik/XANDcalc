@@ -144,6 +144,9 @@ static class Vars
     public const double Vil    = 0.5;
     public const double Iil    = 15e-9;
     #endregion
+
+    //другое
+    public static string Gate = "NOT";
 }
 #endregion
 
@@ -283,7 +286,7 @@ static class ConsoleExtensions
     }
 
     // Хард: значение бессмысленно -> переспросить
-    public static string HardLimit(string name, double v)
+    public static string? HardLimit(string name, double v)
     {
         if ((name == "kSat1" || name == "kSat2") && v <= 1)
             return "k <= 1: no base overdrive — no saturation, the transistor is not a switch. Enter k > 1";
@@ -293,7 +296,7 @@ static class ConsoleExtensions
     }
 
     // Софт: допустимо, но подозрительно -> принять с предупреждением
-    public static string SoftWarn(string name, double v)
+    public static string? SoftWarn(string name, double v)
     {
         if ((name == "Beta1" || name == "Beta2") && (v < 5 || v > 100))
             return "Note: Create: Power Grid clamps gain to 5..100";
@@ -317,12 +320,15 @@ static class ProjectFile
             "XANDprojects");
 
     // Из имени, введённого пользователем, делаем полный путь
+    
+    /*
     public static string Resolve(string name)
     {
         if (!name.EndsWith(".txt", StringComparison.OrdinalIgnoreCase)) name += ".txt";
         if (System.IO.Path.IsPathRooted(name)) return name;   // абсолютный путь — не спорим
         return System.IO.Path.Combine(Folder, name);
     }
+    */
 
     public static void Save(string path)
     {
@@ -330,6 +336,7 @@ static class ProjectFile
         var sb = new System.Text.StringBuilder();
         sb.AppendLine("# XANDcalc project");
         sb.AppendLine("# version 1");
+        sb.AppendLine($"Gate = {Vars.Gate}");
         sb.AppendLine($"# saved {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
         sb.AppendLine($"VinAuto = {VinAuto}");
         foreach (var p in Vars.Parameters)
@@ -353,6 +360,7 @@ static class ProjectFile
             string val  = line[(eq + 1)..].Trim();
 
             if (name == "VinAuto") { if (bool.TryParse(val, out bool b)) VinAuto = b; continue; }
+            if (name == "Gate") { Vars.Gate = val; continue; }
 
             var p = Array.Find(Vars.Parameters, x => x.Name == name);
             if (p == null) continue;                       // имя из новой версии — пропускаем
@@ -375,18 +383,13 @@ class XANDcalc {
     static bool logo = true;   
 
 #region Для сейвов и чтения
-        static string AskName(string def)
-    {
-        $"Project name [{def}]: ".Print(line: false);
-        string s = Console.ReadLine()?.Trim() ?? "";
-        return s == "" ? def : s;
-    }
 
     static void SaveProject()
     {
         try
         {
-            string path = ProjectFile.Resolve(AskName("project"));
+            string? path = PickSavePath();
+            if (path == null) { "Cancelled.".Print(Yellow); return; }
             ProjectFile.Save(path);
             $"Saved to {path}".Print(Green);
         }
@@ -397,16 +400,66 @@ class XANDcalc {
     {
         try
         {
-            string path = ProjectFile.Resolve(AskName("project"));
+            string? path = PickLoadPath();
+            if (path == null) { "Cancelled.".Print(Yellow); return; }
             int n = ProjectFile.Load(path);
             $"Loaded {n} values from {path}".Print(Green);
+            switch (Vars.Gate)
+            {
+                case "NOT": CalcNOT(); break;
+                default: $"This build doesn't know gate '{Vars.Gate}' yet.".Print(Red); break;
+            }
         }
         catch (System.IO.FileNotFoundException) { "File not found in XANDprojects.".Print(Red); }
         catch (System.Exception e) { $"Load failed: {e.Message}".Print(Red); }
     }
 
+    static string? PickSavePath()
+    {
+    #if WIN_DIALOGS
+        using var dlg = new System.Windows.Forms.SaveFileDialog
+        {
+            Title = "Save XANDcalc project",
+            Filter = "XANDcalc project (*.txt)|*.txt",
+            InitialDirectory = ProjectFile.Folder,
+            DefaultExt = "txt",
+            FileName = "project",
+        };
+        return dlg.ShowDialog() == System.Windows.Forms.DialogResult.OK ? dlg.FileName : null;
+    #else
+        return AskPathConsole("Save");
+    #endif
+    }
+
+    static string? PickLoadPath()
+    {
+    #if WIN_DIALOGS
+        System.IO.Directory.CreateDirectory(ProjectFile.Folder);
+        using var dlg = new System.Windows.Forms.OpenFileDialog
+        {
+            Title = "Load XANDcalc project",
+            Filter = "XANDcalc project (*.txt)|*.txt",
+            InitialDirectory = ProjectFile.Folder,
+            DefaultExt = "txt",
+        };
+        return dlg.ShowDialog() == System.Windows.Forms.DialogResult.OK ? dlg.FileName : null;
+    #else
+        return AskPathConsole("Load");
+    #endif
+    }
+
+    static string? AskPathConsole(string action)
+    {
+        $"{action}: file name in XANDprojects (empty = cancel): ".Print(line: false);
+        string s = Console.ReadLine()?.Trim() ?? "";
+        if (s == "") return null;
+        if (!s.EndsWith(".txt", StringComparison.OrdinalIgnoreCase)) s += ".txt";
+        return System.IO.Path.Combine(ProjectFile.Folder, s);
+    }
+
 #endregion
 
+    [System.STAThread]
     static void Main()
     {
         Console.InputEncoding = System.Text.Encoding.UTF8;
@@ -489,6 +542,8 @@ it's available in the original Japanese, as well as English and Vietnamese trans
 
     static void NOTchoice()
     {
+        Gate = "NOT";
+
         Console.Clear();
         Console.WriteLine("\n[NOT] [x=menu]");
 

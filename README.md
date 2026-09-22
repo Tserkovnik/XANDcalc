@@ -84,7 +84,7 @@ git clone https://github.com/Tserkovnik/XANDcalc.git
 cd XANDcalc/src
 dotnet run
 ```
-Requires .NET 8+.
+Requires .NET 10+.
 
 ### Roadmap
 
@@ -186,7 +186,7 @@ git clone https://github.com/Tserkovnik/XANDcalc.git
 cd XANDcalc/src
 dotnet run
 ```
-Нужен .NET 8+.
+Нужен .NET 10+.
 
 ### Планы
 
