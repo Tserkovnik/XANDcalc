@@ -80,9 +80,9 @@ class NOTgate
             {
                 case ReadResult.Number:
                 {
-                    string err = HardLimit(p.Name, v);
+                    string? err = HardLimit(p.Name, v);
                     if (err != null) { err.Print(Red); break; }   // переспрос, step не двигаем
-                    string warn = SoftWarn(p.Name, v);
+                    string? warn = SoftWarn(p.Name, v);
                     if (warn != null) warn.Print(Yellow);
                     if (p.Name == "Vcc" && VinAuto) Vin = v;      // авто включено — Vin едет за Vcc
                     if (p.Name == "Vin") VinAuto = false;         // взяли вручную — авто выкл
@@ -116,6 +116,7 @@ class NOTgate
 
     public static void CalcNOT()
     {
+        logo = true;
 
         //РАСЧЁТЫ!
 
@@ -163,6 +164,8 @@ class NOTgate
 
     public static void NOTres()
     {
+        logo = true;
+
         //ВИЗУАЛ ВИЗУАЛ ВИЗУАЛ
         Console.Clear();
         "The project author is not a professional (yet), so there may be errors.\n".Print(DarkGray);

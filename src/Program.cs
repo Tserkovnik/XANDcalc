@@ -3,6 +3,8 @@ namespace XANDcalc;
 
 class XAND {
 
+    public const string Ext = ".xand";   // содержимое — текст, расширение — ярлык
+
     public static bool logo = true;   
 
     public static void LogoMain()
@@ -16,10 +18,44 @@ class XAND {
 /_/  \_\ /_/        \_\ |_|   \__| |_____/  CALC");
     }
 
+    static void RegisterXand()
+    {
+        if (!OperatingSystem.IsWindows()) return;          // на Linux/Mac реестра нет — молча выходим
+        try
+        {
+            string exe = Environment.ProcessPath!;         // путь к нашему собственному exe
+            string progId = "XANDcalc.Project";
+            using var classes = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Classes", writable: true);
+            if (classes == null) return;
+
+            using (var ext = classes.CreateSubKey(".xand"))            // .xand -> ProgID
+                ext.SetValue("", progId);
+
+            using (var prog = classes.CreateSubKey(progId))
+            {
+                prog.SetValue("", "XANDcalc Project File");            // описание типа
+                using var icon = prog.CreateSubKey("DefaultIcon");
+                icon.SetValue("", $"\"{exe}\",0");                     // иконка = нулевая из самого exe
+                using var cmd = prog.CreateSubKey(@"shell\open\command");
+                cmd.SetValue("", $"\"{exe}\" \"%1\"");                 // команда запуска с путём к файлу
+            }
+        }
+        catch { /* нет доступа к реестру — не смертельно, живём без ассоциации */ }
+    }
+
     [System.STAThread]
-    static void Main()
+    static void Main(string[] args)
     {
         Console.InputEncoding = System.Text.Encoding.UTF8;
+
+        RegisterXand();
+
+        if (args.Length > 0 && System.IO.File.Exists(args[0]))
+        {
+            ProjectFile.Load(args[0]);
+            OpenGate();
+        }
+
         //Заставка
         Console.WriteLine();
 

@@ -2,6 +2,8 @@ dotnet run — быстрая разработка: консольный вво�
 
 dotnet run -r win-x64 — прогнать версию с диалогами, не выходя из разработки.
 
+dotnet build -r win-x64 - чисто затестить, но уже .exe
+
 dotnet publish src -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true -o publish/win-x64 — релизный 
 exe с диалогами.
 

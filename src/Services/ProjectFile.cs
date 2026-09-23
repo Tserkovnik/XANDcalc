@@ -5,6 +5,15 @@ static class ProjectFile
 
 #region Для сейвов и чтения
 
+    public static void OpenGate()
+    {
+        switch (Vars.Gate)
+        {
+            case "NOT": CalcNOT(); break;
+            default: $"This build doesn't know gate '{Vars.Gate}' yet.".Print(Red); break;
+        }
+    }
+
     public static void SaveProject()
     {
         try
@@ -25,11 +34,7 @@ static class ProjectFile
             if (path == null) { "Cancelled.".Print(Yellow); return; }
             int n = ProjectFile.Load(path);
             $"Loaded {n} values from {path}".Print(Green);
-            switch (Vars.Gate)
-            {
-                case "NOT": CalcNOT(); break;
-                default: $"This build doesn't know gate '{Vars.Gate}' yet.".Print(Red); break;
-            }
+            OpenGate();
         }
         catch (System.IO.FileNotFoundException) { "File not found in XANDprojects.".Print(Red); }
         catch (System.Exception e) { $"Load failed: {e.Message}".Print(Red); }
@@ -41,9 +46,9 @@ static class ProjectFile
         using var dlg = new System.Windows.Forms.SaveFileDialog
         {
             Title = "Save XANDcalc project",
-            Filter = "XANDcalc project (*.txt)|*.txt",
+            Filter = $"XANDcalc project (*{Ext})|*{Ext}",
             InitialDirectory = ProjectFile.Folder,
-            DefaultExt = "txt",
+            DefaultExt = "xand",
             FileName = "project",
         };
         return dlg.ShowDialog() == System.Windows.Forms.DialogResult.OK ? dlg.FileName : null;
@@ -59,7 +64,7 @@ static class ProjectFile
         using var dlg = new System.Windows.Forms.OpenFileDialog
         {
             Title = "Load XANDcalc project",
-            Filter = "XANDcalc project (*.txt)|*.txt",
+            Filter = $"XANDcalc project (*{Ext};*.txt)|*{Ext};*.txt|All files (*.*)|*.*",
             InitialDirectory = ProjectFile.Folder,
             DefaultExt = "txt",
         };
@@ -67,14 +72,14 @@ static class ProjectFile
     #else
         return AskPathConsole("Load");
     #endif
-    }
+    } 
 
     public static string? AskPathConsole(string action)
     {
         $"{action}: file name in XANDprojects (empty = cancel): ".Print(line: false);
         string s = Console.ReadLine()?.Trim() ?? "";
         if (s == "") return null;
-        if (!s.EndsWith(".txt", StringComparison.OrdinalIgnoreCase)) s += ".txt";
+        if (!s.Contains('.')) s += Ext;
         return System.IO.Path.Combine(ProjectFile.Folder, s);
     }
 
