@@ -2,10 +2,48 @@ namespace XANDcalc;
 
 class NOTgate
 {
+
+    // --- Объявление параметров: гейт сам говорит, что ему нужно ---
+    // Вызывается при входе в режим и при загрузке; повторно — не сбрасывает значения
+    public static void DeclareTransistor(int i)
+    {
+        Vars.Declare($"Rc{i}", 470, "Ohm", $"t{i}");
+        Vars.Declare($"Beta{i}", 100, "Natural number", $"t{i}");
+        Vars.Declare($"kSat{i}", 2, "Natural number", $"t{i}");
+        // расчётные:
+        Vars.Declare($"Rb{i}", 0, "Ohm", $"t{i}", "out");
+        Vars.Declare($"Vbe{i}", 0, "V", $"t{i}", "out");
+        Vars.Declare($"Vcesat{i}", 0, "V", $"t{i}", "out");
+        Vars.Declare($"Icsat{i}", 0, "A", $"t{i}", "out");
+        Vars.Declare($"Ibsat{i}", 0, "A", $"t{i}", "out");
+    }
+
+    public static void DeclareNOT()
+    {
+        Vars.Declare("Vcc", 5.0, "V", "all");
+        Vars.Declare("Required Fan-Out", 8, "Natural number", "all");
+        Vars.Declare("Vin", 5.0, "V", "all");
+        DeclareTransistor(1);
+        // выходы гейта целиком; имена прежние — сейвы и привычки выживают
+        Vars.Declare("V_in_calc", 0, "V", "all", "out");
+        Vars.Declare("V_oh", 0, "V", "all", "out");
+        Vars.Declare("V_ol", 0, "V", "all", "out");
+        Vars.Declare("V_ih", 0, "V", "all", "out");
+        Vars.Declare("I_oh", 0, "A", "all", "out");
+        Vars.Declare("I_ol", 0, "A", "all", "out");
+        Vars.Declare("I_ol_spare", 0, "A", "all", "out");
+        Vars.Declare("I_ih", 0, "A", "all", "out");
+        Vars.Declare("Fan-Out", 0, "Natural number", "all", "out");
+        Vars.Declare("NmL", 0, "V", "all", "out");
+        Vars.Declare("NmH", 0, "V", "all", "out");
+    }
+
+    // Точка нагрузки: формулы те же, транзистор берём через обёртку
     static (double Voh, double NmH, double Ioh, double Iih) LoadPoint(int n)
     {
-        double voh = (Rb * Vcc + n * Rc1 * Vbe) / (Rb + n * Rc1);
-        return (voh, voh - Vih, (Vcc - voh) / Rc1, (voh - Vbe) / (Rb + Rc1));
+        var t1 = new Transistor(1);
+        double voh = (t1.Rb * Vcc + n * t1.Rc * t1.Vbe) / (t1.Rb + n * t1.Rc);
+        return (voh, voh - Vih, (Vcc - voh) / t1.Rc, (voh - t1.Vbe) / (t1.Rb + t1.Rc));
     }
 
     public static void PrintLoadTable()
@@ -66,7 +104,7 @@ class NOTgate
         Console.Clear();
         Console.WriteLine("\n[NOT] [x=menu]");
 
-        var filteredParams = Vars.Parameters.Where(p => p.Tag == "all" || p.Tag == "t1").ToList();
+        var filteredParams = Vars.Order.Where(p => p.Kind == "in" && (p.Tag == "all" || p.Tag == "t1")).ToList();
 
         int step = 0;
         while (step < filteredParams.Count)
@@ -117,42 +155,41 @@ class NOTgate
     public static void CalcNOT()
     {
         logo = true;
+        var t1 = new Transistor(1);
 
         //РАСЧЁТЫ!
 
         //модель транзистора (Ebers-Moll)
-        if (kSat1 <= 1) { "k must be > 1 for saturation!".Print(Red); return; }
+        if (t1.k <= 1) { "k must be > 1 for saturation!".Print(Red); return; }
 
-        double betaR = Math.Max(0.5, Beta1 * 0.1);   // обратный β
+        t1.Vcesat = Vt * Math.Log((t1.Beta / t1.BetaR + t1.k * (1 + 1 / t1.BetaR)) / (t1.k - 1));
 
-        Vcesat = Vt * Math.Log((Beta1 / betaR + kSat1 * (1 + 1 / betaR)) / (kSat1 - 1));
+        t1.Icsat = (Vcc - t1.Vcesat) / t1.Rc;
 
-        Icsat = (Vcc - Vcesat) / Rc1;
-
-        double Ie = Icsat * (1 + 1 / Beta1);
-        Vbe = Vt * Math.Log(Icsat / Is + 1) + Ie * Rs;   // Шокли + омическая добавка
+        double Ie = t1.Icsat * (1 + 1 / t1.Beta);
+        t1.Vbe = Vt * Math.Log(t1.Icsat / Is + 1) + Ie * Rs;   // Шокли + омическая добавка
 
         //№3 Ток базы, мин
-        Ibsat = Icsat/Beta1*kSat1;
+        t1.Ibsat = t1.Icsat/t1.Beta*t1.k;
 
         //№4 Базовый резистор
         VinCalc = Vin * 0.9;
-        Rb = (VinCalc - Vbe)/Ibsat - Rc1*FOreq;
+        t1.Rb = (VinCalc - t1.Vbe)/t1.Ibsat - t1.Rc*FOreq;
 
         //ПАРАМЕТРЫ гейта под нагрузкой
 
-        Voh = (Rb*Vcc + FOreq*Rc1*Vbe)/(Rb+FOreq*Rc1);
-        Vol = Vcesat;
+        Voh = (t1.Rb*Vcc + FOreq*t1.Rc*t1.Vbe)/(t1.Rb+FOreq*t1.Rc);
+        Vol = t1.Vcesat;
 
-        Vih = Vbe + Ibsat*Rb;
+        Vih = t1.Vbe + t1.Ibsat*t1.Rb;
 
-        Ioh = (Vcc - Voh)/Rc1;//sourse current
+        Ioh = (Vcc - Voh)/t1.Rc;//sourse current
 
-        Iol = (Vcc - Vcesat) / Rc1;      // РЕАЛЬНЫЙ ток стока в "0" (= Icsat)
-        IolSpare = Icsat * (kSat1 - 1);  // ЗАПАС: сколько ещё можно слить, оставаясь в насыщении
+        Iol = (Vcc - t1.Vcesat) / t1.Rc;      // РЕАЛЬНЫЙ ток стока в "0" (= Icsat)
+        IolSpare = t1.Icsat * (t1.k - 1);  // ЗАПАС: сколько ещё можно слить, оставаясь в насыщении
     
 
-        Iih = (Voh - Vbe)/(Rb+Rc1);
+        Iih = (Voh - t1.Vbe)/(t1.Rb+t1.Rc);
 
         FO = (int)(Ioh/Iih);
 
@@ -165,6 +202,7 @@ class NOTgate
     public static void NOTres()
     {
         logo = true;
+        var t1 = new Transistor(1);
 
         //ВИЗУАЛ ВИЗУАЛ ВИЗУАЛ
         Console.Clear();
@@ -175,21 +213,21 @@ class NOTgate
 
         "[NOT gate under load]\n".Print();
 
-        $"Rc = {Rc1:N0} Ohm".Print();
-        $"Rb = {Rb:N0} Ohm\n".Print(Rb < 0 ? Red : null);
+        $"Rc = {t1.Rc:N0} Ohm".Print();
+        $"Rb = {t1.Rb:N0} Ohm\n".Print(t1.Rb < 0 ? Red : null);
 
         $"Vcc = {Vcc:0.00}V".Print(Cyan);
-        $"Beta = {Beta1}".Print();
-        $"k = {kSat1}\n".Print();
+        $"Beta = {t1.Beta}".Print();
+        $"k = {t1.k}\n".Print();
 
         $"V_in = {Vin:0.00}V".Print(Cyan);
         $"V_in calc = {VinCalc:0.00}V (-10%)\n".Print(DarkGray);
 
-        $"V_be = {Vbe:0.00}V".Print();
-        $"V_ce(sat) = {Vcesat:0.00}V\n".Print();
+        $"V_be = {t1.Vbe:0.00}V".Print();
+        $"V_ce(sat) = {t1.Vcesat:0.00}V\n".Print();
 
-        $"I_c = {Icsat.FormatCurrent()}".Print();
-        $"I_b = {Ibsat.FormatCurrent()}\n".Print();
+        $"I_c = {t1.Icsat.FormatCurrent()}".Print();
+        $"I_b = {t1.Ibsat.FormatCurrent()}\n".Print();
 
         PrintLoadTable();
 

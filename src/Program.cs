@@ -43,10 +43,90 @@ class XAND {
         catch { /* нет доступа к реестру — не смертельно, живём без ассоциации */ }
     }
 
+    public static void SaveProject()
+    {
+        try
+        {
+            string? path = PickSavePath();
+            if (path == null) { "Cancelled.".Print(Yellow); return; }
+            ProjectFile.Save(path);
+            $"Saved to {path}".Print(Green);
+        }
+        catch (System.Exception e) { $"Save failed: {e.Message}".Print(Red); }
+    }
+
+    public static void LoadProject()
+    {
+        try
+        {
+            string? path = PickLoadPath();
+            if (path == null) { "Cancelled.".Print(Yellow); return; }
+            int n = ProjectFile.Load(path);
+            $"Loaded {n} values from {path}".Print(Green);
+            OpenGate();
+        }
+        catch (System.IO.FileNotFoundException) { "File not found in XANDprojects.".Print(Red); }
+        catch (System.Exception e) { $"Load failed: {e.Message}".Print(Red); }
+    }
+
+    static string? PickSavePath()
+    {
+#if WIN_DIALOGS
+        System.IO.Directory.CreateDirectory(ProjectFile.Folder);
+        using var dlg = new System.Windows.Forms.SaveFileDialog
+        {
+            Title = "Save XANDcalc project",
+            Filter = $"XANDcalc project (*{ProjectFile.Ext})|*{ProjectFile.Ext}",
+            InitialDirectory = ProjectFile.Folder,
+            DefaultExt = "xand",
+            FileName = "project",
+        };
+        return dlg.ShowDialog() == System.Windows.Forms.DialogResult.OK ? dlg.FileName : null;
+#else
+        return AskPathConsole("Save");
+#endif
+    }
+
+    static string? PickLoadPath()
+    {
+#if WIN_DIALOGS
+        System.IO.Directory.CreateDirectory(ProjectFile.Folder);
+        using var dlg = new System.Windows.Forms.OpenFileDialog
+        {
+            Title = "Load XANDcalc project",
+            Filter = $"XANDcalc project (*{ProjectFile.Ext};*.txt)|*{ProjectFile.Ext};*.txt|All files (*.*)|*.*",
+            InitialDirectory = ProjectFile.Folder,
+            DefaultExt = "xand",
+        };
+        return dlg.ShowDialog() == System.Windows.Forms.DialogResult.OK ? dlg.FileName : null;
+#else
+        return AskPathConsole("Load");
+#endif
+    }
+
+    static string? AskPathConsole(string action)
+    {
+        $"{action}: file name in XANDprojects (empty = cancel): ".Print(line: false);
+        string s = Console.ReadLine()?.Trim() ?? "";
+        if (s == "") return null;
+        if (!s.Contains('.')) s += ProjectFile.Ext;
+        return System.IO.Path.Combine(ProjectFile.Folder, s);
+    }
+
+    public static void OpenGate()
+    {
+        switch (Vars.Gate)
+        {
+            case "NOT": NOTgate.NOTchoice(); break;
+            default: $"This build doesn't know gate '{Vars.Gate}' yet.".Print(Red); break;
+        }
+    }
+
     [System.STAThread]
     static void Main(string[] args)
     {
         Console.InputEncoding = System.Text.Encoding.UTF8;
+        NOTgate.DeclareNOT();
 
         RegisterXand();
 
