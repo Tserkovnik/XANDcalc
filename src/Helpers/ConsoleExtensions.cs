@@ -39,6 +39,15 @@ static class ConsoleExtensions
         return $"{amperes * 1e12:F2} pA";
     }
 
+    public static string FormatPower(this double watts)
+    {
+        double abs = Math.Abs(watts);
+        if (abs >= 1)    return $"{watts:F2} W";
+        if (abs >= 1e-3) return $"{watts * 1e3:F2} mW";
+        if (abs >= 1e-6) return $"{watts * 1e6:F2} uW";
+        return $"{watts * 1e9:F2} nW";
+    }
+
      public static void ClearLastLine()
     {
         // курсор сдвиг вверх

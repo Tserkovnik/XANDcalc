@@ -18,6 +18,9 @@ class Transistor
     public double Vcesat { get => Vars.Val($"Vcesat{I}"); set => Vars.Set($"Vcesat{I}", value); }
     public double Icsat  { get => Vars.Val($"Icsat{I}");  set => Vars.Set($"Icsat{I}", value); }
     public double Ibsat  { get => Vars.Val($"Ibsat{I}");  set => Vars.Set($"Ibsat{I}", value); }
+    public double Prc { get => Vars.Val($"Prc{I}"); set => Vars.Set($"Prc{I}", value); }
+    public double Prb { get => Vars.Val($"Prb{I}"); set => Vars.Set($"Prb{I}", value); }
+    public double Ptr { get => Vars.Val($"Ptr{I}"); set => Vars.Set($"Ptr{I}", value); }
 
     public double BetaR => Math.Max(0.5, Beta * 0.1);   // обратная β, как в моде
 }

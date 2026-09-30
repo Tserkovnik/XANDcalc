@@ -16,6 +16,10 @@ class NOTgate
         Vars.Declare($"Vcesat{i}", 0, "V", $"t{i}", "out");
         Vars.Declare($"Icsat{i}", 0, "A", $"t{i}", "out");
         Vars.Declare($"Ibsat{i}", 0, "A", $"t{i}", "out");
+
+        Vars.Declare($"Prc{i}", 0, "W", $"t{i}", "out");   // коллекторный резистор
+        Vars.Declare($"Prb{i}", 0, "W", $"t{i}", "out");   // базовый резистор
+        Vars.Declare($"Ptr{i}", 0, "W", $"t{i}", "out");   // сам транзистор
     }
 
     public static void DeclareNOT()
@@ -23,6 +27,7 @@ class NOTgate
         Vars.Declare("Vcc", 5.0, "V", "all");
         Vars.Declare("Required Fan-Out", 8, "Natural number", "all");
         Vars.Declare("Vin", 5.0, "V", "all");
+        Vars.Declare("T_amb", 18.0, "C", "biome");   // расчётный биом по умолчанию = равнины
         DeclareTransistor(1);
         // выходы гейта целиком; имена прежние — сейвы и привычки выживают
         Vars.Declare("V_in_calc", 0, "V", "all", "out");
@@ -36,6 +41,7 @@ class NOTgate
         Vars.Declare("Fan-Out", 0, "Natural number", "all", "out");
         Vars.Declare("NmL", 0, "V", "all", "out");
         Vars.Declare("NmH", 0, "V", "all", "out");
+        
     }
 
     // Точка нагрузки: формулы те же, транзистор берём через обёртку
@@ -93,12 +99,71 @@ class NOTgate
         Border('└', '┴', '┘');
     }
 
+    public static void PrintThermalTable()
+    {
+        var t1 = new Transistor(1);
+        const int L = 10;
+        const int W = 14;
+        var cols = ThermalColumns(Tamb);   // сосед снизу, выбранный, сосед сверху
+        void Border(char left, char mid, char right)
+        {
+            Console.Write(left + new string('─', L));
+            foreach (var _ in cols) Console.Write(mid + new string('─', W));
+            Console.WriteLine(right);
+        }
+        void Cell(double t)
+        {
+            Console.Write("│");
+            $"{t:F3} C".PadLeft(W).Print(t >= Tover ? Red : t >= Trated ? Yellow : null, false);
+        }
+        "\n=== Thermal table (steady, worst case) ===".Print(Cyan);
+        Border('┌', '┬', '┐');
+        Console.Write("│" + "biome".PadLeft(L));
+        foreach (var c in cols) Console.Write("│" + c.Head.PadLeft(W));
+        Console.WriteLine("│");
+        Border('├', '┼', '┤');
+        Console.Write("│" + "T_amb".PadRight(L));
+        foreach (var c in cols) Console.Write("│" + $"{c.T:F3} C".PadLeft(W));
+        Console.WriteLine("│");
+        Console.Write("│" + "T_Rc".PadRight(L));
+        foreach (var c in cols) Cell(c.T + t1.Prc / DRes);
+        Console.WriteLine("│");
+        Console.Write("│" + "T_Rb".PadRight(L));
+        foreach (var c in cols) Cell(c.T + t1.Prb / DRes);
+        Console.WriteLine("│");
+        Console.Write("│" + "T_tr".PadRight(L));
+        foreach (var c in cols) Cell(c.T + t1.Ptr / DTr);
+        Console.WriteLine("│");
+        Border('└', '┴', '┘');
+    }
 
+    // Три колонки вокруг выбранного T_amb: ближайший снизу, сам выбранный (*), ближайший сверху
+    static (string Head, double T)[] ThermalColumns(double selected)
+    {
+        var all = new List<(string Head, double T)>();
+        int center = -1;
+        foreach (var (name, b) in Biomes.Common)
+        {
+            double a = Biomes.Ambient(b);
+            if (center < 0 && Math.Abs(a - selected) < 0.05)
+            { all.Add((name + " *", a)); center = all.Count - 1; }   // совпало с биомом — он и есть центр
+            else all.Add((name, a));
+        }
+        if (center < 0)                                               // кастомное значение
+        {
+            all.Add(("yours *", selected));
+            all.Sort((x, y) => x.T.CompareTo(y.T));
+            center = all.FindIndex(c => c.Head == "yours *");
+        }
+        int lo = Math.Max(0, Math.Min(center - 1, all.Count - 3));   // окно из 3 с центром в выбранном, у краёв сдвигается
+        return new[] { all[lo], all[lo + 1], all[lo + 2] };
+    }
 
 
     public static void NOTchoice()
     {
         Gate = "NOT";
+        DeclareNOT(); if (!ChooseBiome()) return;
         logo = true;
 
         Console.Clear();
@@ -196,6 +261,12 @@ class NOTgate
         NmL = Vil - Vol;
         NmH = Voh - Vih;
 
+        // тепло: Джоуль-Ленц на резисторах + оба перехода транзистора
+        t1.Prc = t1.Icsat * t1.Icsat * t1.Rc;
+        t1.Prb = t1.Ibsat * t1.Ibsat * t1.Rb;
+        t1.Ptr = t1.Vcesat * t1.Icsat + t1.Vbe * t1.Ibsat;
+
+
         NOTres();
     }
 
@@ -230,6 +301,14 @@ class NOTgate
         $"I_b = {t1.Ibsat.FormatCurrent()}\n".Print();
 
         PrintLoadTable();
+
+        PrintThermalTable();
+
+        double Pgate = t1.Prc + t1.Prb + t1.Ptr;
+        $"\nP_Rc = {t1.Prc.FormatPower()}".Print();
+        $"P_Rb = {t1.Prb.FormatPower()}".Print();
+        $"P_tr = {t1.Ptr.FormatPower()}".Print();
+        $"P_gate = {Pgate.FormatPower()}".Print();
 
         $"\nI_ol = {Iol.FormatCurrent()}".Print();
         $"I_ol spare = {IolSpare.FormatCurrent()}".Print();

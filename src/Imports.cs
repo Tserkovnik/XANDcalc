@@ -7,3 +7,5 @@ global using static XANDcalc.NOTgate;
 global using static XANDcalc.Validation;
 global using static XANDcalc.CalculationRow;
 global using static XANDcalc.XAND;
+global using static XANDcalc.Transistor;
+global using static XANDcalc.Biomes;

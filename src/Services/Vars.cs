@@ -25,6 +25,7 @@ static class Vars
     public static double Vcc   { get => Val("Vcc");   set => Set("Vcc", value); }
     public static double FOreq { get => Val("Required Fan-Out"); set => Set("Required Fan-Out", value); }
     public static double Vin   { get => Val("Vin");   set => Set("Vin", value); }
+    public static double Tamb  { get => Val("T_amb"); set => Set("T_amb", value); }
 
     // --- Выходы гейта: набор фиксирован для любого гейта ---
     public static double VinCalc  { get => Val("V_in_calc");  set => Set("V_in_calc", value); }
@@ -49,6 +50,13 @@ static class Vars
     public const double Rs = 0.1;
     public const double Vil = 0.5;
     public const double Iil = 15e-9;
+
+    // --- Константы тепла (мод Create: Power Grid) ---
+    public const double Tstd   = 22.0;    // точка калибровки setMaxPower
+    public const double Trated = 125.0;   // дым + калибровка
+    public const double Tover  = 175.0;   // смерть
+    public static double DTr  => 20.0 / (Trated - Tstd);   // транзистор, Вт/К
+    public static double DRes => 25.0 / (Trated - Tstd);   // резистор, Вт/К
 
     // таблица сравнения — пока не трогаем
     public static List<CalculationRow> ResultsTable = new();

@@ -152,6 +152,7 @@ class XAND {
             Console.WriteLine("1. NOT gate");
             "2. Save project".Print();
             "3. Load project".Print();
+            "4. Biome table".Print();
 
             Console.Write("\nInput: ");
 
@@ -194,6 +195,15 @@ class XAND {
                     LoadProject();
                     break;
 
+                case "4": case "biomes":
+                    Console.Clear();
+                    LogoMain();
+                    Biomes.PrintReference();
+                    "\nReturn to menu? (y): ".Print(line: false);
+                    Console.ReadLine();
+                    logo = true;
+                    break;
+
                 case "echo":
                     Console.WriteLine();
                     Console.WriteLine(@"""ECHO"" is a beautiful song; I really love listening to it. 
@@ -207,6 +217,10 @@ it's available in the original Japanese, as well as English and Vietnamese trans
 
                 case "qwen":
                     "\nThank you\n".Print();
+                    break;
+
+                case "git":
+                    "\nGit Gudn".Print();
                     break;
 
             }
