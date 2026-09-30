@@ -220,7 +220,7 @@ it's available in the original Japanese, as well as English and Vietnamese trans
                     break;
 
                 case "git":
-                    "\nGit Gudn".Print();
+                    "\nGit Gud".Print();
                     break;
 
             }
