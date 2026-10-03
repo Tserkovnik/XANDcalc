@@ -150,9 +150,10 @@ class XAND {
             logo = false;
             Console.WriteLine("\n0. Exit/Stop");
             Console.WriteLine("1. NOT gate");
-            "2. Save project".Print();
-            "3. Load project".Print();
-            "4. Biome table".Print();
+            "2. NOR gate".Print();
+            "3. Save project".Print();
+            "4. Load project".Print();
+            "5. Biome table".Print();
 
             Console.Write("\nInput: ");
 
@@ -181,21 +182,25 @@ class XAND {
                     NOTchoice();
                     break;
 
-                case "2": case "save":
+                case "2": case "nor":
+                    NORchoice();
+                    break;
+
+                case "3": case "save":
                     Console.Clear();
                     LogoMain();
                     "\n".Print();
                     SaveProject();
                     break;
 
-                case "3": case "load": 
+                case "4": case "load": 
                     Console.Clear();
                     LogoMain();
                     "\n".Print();
                     LoadProject();
                     break;
 
-                case "4": case "biomes":
+                case "5": case "biomes":
                     Console.Clear();
                     LogoMain();
                     Biomes.PrintReference();

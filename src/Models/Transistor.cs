@@ -8,7 +8,6 @@ class Transistor
     public Transistor(int i) { I = i; }
 
     // входы
-    public double Rc   => Vars.Val($"Rc{I}");
     public double Beta => Vars.Val($"Beta{I}");
     public double k    => Vars.Val($"kSat{I}");
 
@@ -18,7 +17,6 @@ class Transistor
     public double Vcesat { get => Vars.Val($"Vcesat{I}"); set => Vars.Set($"Vcesat{I}", value); }
     public double Icsat  { get => Vars.Val($"Icsat{I}");  set => Vars.Set($"Icsat{I}", value); }
     public double Ibsat  { get => Vars.Val($"Ibsat{I}");  set => Vars.Set($"Ibsat{I}", value); }
-    public double Prc { get => Vars.Val($"Prc{I}"); set => Vars.Set($"Prc{I}", value); }
     public double Prb { get => Vars.Val($"Prb{I}"); set => Vars.Set($"Prb{I}", value); }
     public double Ptr { get => Vars.Val($"Ptr{I}"); set => Vars.Set($"Ptr{I}", value); }
 

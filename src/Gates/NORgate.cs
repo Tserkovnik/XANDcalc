@@ -1,10 +1,9 @@
+using System.Globalization;
+
 namespace XANDcalc;
 
-class NOTgate
+class NORgate
 {
-
-    // --- Объявление параметров: гейт сам говорит, что ему нужно ---
-    // Вызывается при входе в режим и при загрузке; повторно — не сбрасывает значения
     public static void DeclareTransistor(int i)
     {
         Vars.Declare($"Beta{i}", 100, "Natural number", $"t{i}");
@@ -20,15 +19,15 @@ class NOTgate
         Vars.Declare($"Ptr{i}", 0, "W", $"t{i}", "out");   // сам транзистор
     }
 
-    public static void DeclareNOT()
+    public static void DeclareGlobals()
     {
         Vars.Declare("Vcc", 5.0, "V", "all");
         Vars.Declare("Required Fan-Out", 8, "Natural number", "all");
         Vars.Declare("Vin", 5.0, "V", "all");
         Vars.Declare("Rc", 470.0, "Ohm", "all");
-        Vars.Declare("T_amb", 18.0, "C", "biome");   // расчётный биом по умолчанию = равнины
-        DeclareTransistor(1);
-        // выходы гейта целиком; имена прежние — сейвы и привычки выживают
+        Vars.Declare("T_amb", 18.0, "C", "biome");
+        Vars.Declare("Inputs", 2, "Natural number", "n");  // тег "n" = спрашивается отдельно
+        // выходы гейта (имена как у NOT) + P_rc
         Vars.Declare("V_in_calc", 0, "V", "all", "out");
         Vars.Declare("V_oh", 0, "V", "all", "out");
         Vars.Declare("V_ol", 0, "V", "all", "out");
@@ -42,45 +41,45 @@ class NOTgate
         Vars.Declare("NmL", 0, "V", "all", "out");
         Vars.Declare("NmH", 0, "V", "all", "out");
         Vars.Declare("P_rc", 0, "W", "all", "out");
-        
     }
 
-    // Точка нагрузки: формулы те же, транзистор берём через обёртку
+    public static void DeclareNOR()
+    {
+        DeclareGlobals();
+        int n = (int)NumIn;
+        for (int i = 1; i <= n; i++) DeclareTransistor(i);
+    }
+
+// Точка нагрузки: общий rc, нагрузка — идентичные копии (представитель t1)
     static (double Voh, double NmH, double Ioh, double Iih) LoadPoint(int n)
     {
         var t1 = new Transistor(1);
-        double voh = (t1.Rb * Vcc + n * Rc * t1.Vbe) / (t1.Rb + n * Rc);
-        return (voh, voh - Vih, (Vcc - voh) / Rc, (voh - t1.Vbe) / (t1.Rb + Rc));
+        double rc = Vars.Val("Rc");
+        double voh = (t1.Rb * Vcc + n * rc * t1.Vbe) / (t1.Rb + n * rc);
+        return (voh, voh - Vih, (Vcc - voh) / rc, (voh - t1.Vbe) / (t1.Rb + rc));
     }
 
     public static void PrintLoadTable()
     {
-        const int L = 10;   // ширина колонки-подписи
-        const int W = 14;   // ширина колонки данных
-
+        const int L = 10;
+        const int W = 14;
         var pts = new[] { LoadPoint(0), LoadPoint(1), LoadPoint((int)FOreq) };
         string[] heads = { "N=0", "N=1", $"N={FOreq:F0}" };
-
-        // локальная функция: рисует линию рамки
         void Border(char left, char mid, char right)
         {
             Console.Write(left + new string('─', L));
             foreach (var _ in pts) Console.Write(mid + new string('─', W));
             Console.WriteLine(right);
         }
-
         "\n=== Load table ===".Print(Cyan);
-
-        Border('┌', '┬', '┐');
+        Border('┌', '┴', '┐');
         Console.Write("│" + "FO = N".PadLeft(L));
         foreach (var h in heads) Console.Write("│" + h.PadLeft(W));
         Console.WriteLine("│");
         Border('├', '┼', '┤');
-
         Console.Write("│" + "Voh".PadRight(L));
         foreach (var t in pts) Console.Write("│" + $"{t.Voh:F2} V".PadLeft(W));
         Console.WriteLine("│");
-
         Console.Write("│" + "NM_H".PadRight(L));
         foreach (var t in pts)
         {
@@ -88,24 +87,29 @@ class NOTgate
             $"{t.NmH:F2} V".PadLeft(W).Print(t.NmH < 0.3 ? Red : null, false);
         }
         Console.WriteLine("│");
-
         Console.Write("│" + "Ioh".PadRight(L));
         foreach (var t in pts) Console.Write("│" + t.Ioh.FormatCurrent().PadLeft(W));
         Console.WriteLine("│");
-
         Console.Write("│" + "Iih".PadRight(L));
         foreach (var t in pts) Console.Write("│" + t.Iih.FormatCurrent().PadLeft(W));
         Console.WriteLine("│");
-
         Border('└', '┴', '┘');
     }
 
     public static void PrintThermalTable()
     {
-        var t1 = new Transistor(1);
+        int n = (int)Vars.Val("Inputs");
+        double ptrMax = 0, prbMax = 0;
+        for (int i = 1; i <= n; i++)
+        {
+            var t = new Transistor(i);
+            ptrMax = Math.Max(ptrMax, t.Ptr);   // худший из открытых
+            prbMax = Math.Max(prbMax, t.Prb);
+        }
+        double prc = Vars.Val("P_rc");
         const int L = 10;
         const int W = 14;
-        var cols = ThermalColumns(Tamb);   // сосед снизу, выбранный, сосед сверху
+        var cols = ThermalColumns(Tamb);        // переиспользуем оконную таблицу из NOTgate
         void Border(char left, char mid, char right)
         {
             Console.Write(left + new string('─', L));
@@ -127,50 +131,52 @@ class NOTgate
         foreach (var c in cols) Console.Write("│" + $"{c.T:F3} C".PadLeft(W));
         Console.WriteLine("│");
         Console.Write("│" + "T_Rc".PadRight(L));
-        foreach (var c in cols) Cell(c.T + Prc / DRes);
+        foreach (var c in cols) Cell(c.T + prc / DRes);
         Console.WriteLine("│");
         Console.Write("│" + "T_Rb".PadRight(L));
-        foreach (var c in cols) Cell(c.T + t1.Prb / DRes);
+        foreach (var c in cols) Cell(c.T + prbMax / DRes);
         Console.WriteLine("│");
         Console.Write("│" + "T_tr".PadRight(L));
-        foreach (var c in cols) Cell(c.T + t1.Ptr / DTr);
+        foreach (var c in cols) Cell(c.T + ptrMax / DTr);
         Console.WriteLine("│");
         Border('└', '┴', '┘');
     }
 
-    // Три колонки вокруг выбранного T_amb: ближайший снизу, сам выбранный (*), ближайший сверху
-    public static (string Head, double T)[] ThermalColumns(double selected)
-    {
-        var all = new List<(string Head, double T)>();
-        int center = -1;
-        foreach (var (name, b) in Biomes.Common)
-        {
-            double a = Biomes.Ambient(b);
-            if (center < 0 && Math.Abs(a - selected) < 0.05)
-            { all.Add((name + " *", a)); center = all.Count - 1; }   // совпало с биомом — он и есть центр
-            else all.Add((name, a));
-        }
-        if (center < 0)                                               // кастомное значение
-        {
-            all.Add(("yours *", selected));
-            all.Sort((x, y) => x.T.CompareTo(y.T));
-            center = all.FindIndex(c => c.Head == "yours *");
-        }
-        int lo = Math.Max(0, Math.Min(center - 1, all.Count - 3));   // окно из 3 с центром в выбранном, у краёв сдвигается
-        return new[] { all[lo], all[lo + 1], all[lo + 2] };
-    }
-
-
-    public static void NOTchoice()
+    public static void NORchoice()
     {
         logo = true;
-        Gate = "NOT";
-        DeclareNOT(); if (!ChooseBiome()) return;
+        Gate = "NOR";
+        DeclareGlobals();
+        "\n[NOR] [x=menu]".Print();
+        bool flag = true;
+        
+        while (flag)
+            switch(ReadNumber($"Number of inputs (now {NumIn}) [0=exit]: ", out double n))
+            {
+                case ReadResult.Number:
+                    if (n < 1 || n != Math.Floor(n)) { "Whole number >= 1".Print(Yellow); break; }
+                    NumIn = n;
+                    flag = false;
+                    break;
+                    
+                case ReadResult.Back: case ReadResult.Exit:
+                    return;
+
+                case ReadResult.Auto: case ReadResult.Retry:
+                    break;
+
+                case ReadResult.Skip:
+                    flag = false;
+                    break;
+            }
+            
+        DeclareNOR();
+        if (!ChooseBiome()) return;
 
         Console.Clear();
-        Console.WriteLine("\n[NOT] [x=menu]");
-
-        var filteredParams = Vars.Order.Where(p => p.Kind == "in" && (p.Tag == "all" || p.Tag == "t1")).ToList();
+        Console.WriteLine("\n[NOR] [x=menu]");
+        var filteredParams = Vars.Order.Where(p => p.Kind == "in" 
+            && (p.Tag == "all" || (p.Tag.StartsWith("t") && int.Parse(p.Tag[1..]) <= (int)NumIn))).ToList();
 
         int step = 0;
         while (step < filteredParams.Count)
@@ -214,139 +220,112 @@ class NOTgate
             }
         }
 
-        CalcNOT();   // сюда расчёт
+        CalcNOR();   // сюда расчёт
 
     }
 
-    public static void CalcNOT()
+    public static void CalcNOR()
     {
         logo = true;
-        var t1 = new Transistor(1);
-
-        //РАСЧЁТЫ!
-
-        //модель транзистора (Ebers-Moll)
-        if (t1.k <= 1) { "k must be > 1 for saturation!".Print(Red); return; }
-
-        t1.Vcesat = Vt * Math.Log((t1.Beta / t1.BetaR + t1.k * (1 + 1 / t1.BetaR)) / (t1.k - 1));
-
-        t1.Icsat = (Vcc - t1.Vcesat) / Rc;
-
-        double Ie = t1.Icsat * (1 + 1 / t1.Beta);
-        t1.Vbe = Vt * Math.Log(t1.Icsat / Is + 1) + Ie * Rs;   // Шокли + омическая добавка
-
-        //№3 Ток базы, мин
-        t1.Ibsat = t1.Icsat/t1.Beta*t1.k;
-
-        //№4 Базовый резистор
+        int n = (int)Vars.Val("Inputs");
+        double rc = Vars.Val("Rc");
         VinCalc = Vin * 0.9;
-        t1.Rb = (VinCalc - t1.Vbe)/t1.Ibsat - Rc*FOreq;
-
-        //ПАРАМЕТРЫ гейта под нагрузкой
-
-        Voh = (t1.Rb*Vcc + FOreq*Rc*t1.Vbe)/(t1.Rb+FOreq*Rc);
-        Vol = t1.Vcesat;
-
-        Vih = t1.Vbe + t1.Ibsat*t1.Rb;
+        // ХУДШИЙ случай: высокий вход ОДИН — этот транзистор тянет ПОЛНЫЙ ток общего Rc.
+        // Деление тока на N (все входы высокие) — бонус, а не база для расчёта базы!
+        int w = 1; double vcesatW = -1;
+        for (int i = 1; i <= n; i++)
+        {
+            var t = new Transistor(i);
+            if (t.k <= 1) { $"k{i} must be > 1 for saturation!".Print(Red); return; }
+            t.Vcesat = Vt * Math.Log((t.Beta / t.BetaR + t.k * (1 + 1 / t.BetaR)) / (t.k - 1));
+            t.Icsat = (Vcc - t.Vcesat) / rc;
+            double Ie = t.Icsat * (1 + 1 / t.Beta);
+            t.Vbe = Vt * Math.Log(t.Icsat / Is + 1) + Ie * Rs;
+            t.Ibsat = t.Icsat / t.Beta * t.k;
+            t.Rb = (VinCalc - t.Vbe) / t.Ibsat - rc * FOreq;
+            t.Prb = t.Ibsat * t.Ibsat * t.Rb;
+            t.Ptr = t.Vcesat * t.Icsat + t.Vbe * t.Ibsat;   // этот транзистор открыт в одиночку
+            if (t.Vcesat > vcesatW) { vcesatW = t.Vcesat; w = i; }
+        }
+        var tw = new Transistor(w);                          // худший транзистор задаёт V_ol и запас
+        // гейт целиком: нагрузки — идентичные копии, представитель t1
+        // Нагрузки — идентичные копии; худший случай — все копии жаднейшего входа (min Rb)
+        int g = 1; double vohW = double.MaxValue;
+        for (int i = 1; i <= n; i++)
+        {
+            var t = new Transistor(i);
+            double v = (t.Rb * Vcc + FOreq * rc * t.Vbe) / (t.Rb + FOreq * rc);
+            if (v < vohW) { vohW = v; g = i; }
+        }
+        var tg = new Transistor(g);
+        Voh = vohW;
+        Ioh = (Vcc - Voh) / rc;
+        Iih = (Voh - tg.Vbe) / (tg.Rb + rc);   // цена одной жадной нагрузки
+        Vol = vcesatW;
+        double vihMax = 0;
+        for (int i = 1; i <= n; i++)
+        {
+            var t = new Transistor(i);
+            vihMax = Math.Max(vihMax, t.Vbe + t.Ibsat * t.Rb);   // порог входа: худший из входов
+        }
+        Vih = vihMax;
         Vil = Vt * Math.Log(Vt / (Rc * Is));  // зависит от Rc
-
-        Ioh = (Vcc - Voh)/Rc;//sourse current
-
-        Iol = (Vcc - t1.Vcesat) / Rc;      // РЕАЛЬНЫЙ ток стока в "0" (= Icsat)
-        IolSpare = t1.Icsat * (t1.k - 1);  // ЗАПАС: сколько ещё можно слить, оставаясь в насыщении
-    
-
-        Iih = (Voh - t1.Vbe)/(t1.Rb+Rc);
-
-        FO = (int)(Ioh/Iih);
-
+        Iol = (Vcc - Vol) / rc;
+        IolSpare = tw.Icsat * (tw.k - 1);
+        FO = (int)(Ioh / Iih);
         NmL = Vil - Vol;
         NmH = Voh - Vih;
-
-        // тепло: Джоуль-Ленц на резисторах + оба перехода транзистора
-        Prc = t1.Icsat * t1.Icsat * Rc;
-        t1.Prb = t1.Ibsat * t1.Ibsat * t1.Rb;
-        t1.Ptr = t1.Vcesat * t1.Icsat + t1.Vbe * t1.Ibsat;
-
-
-        NOTres();
+        Prc = tw.Icsat * tw.Icsat * rc;
+        NORres();
     }
 
-    public static void NOTres()
+    public static void NORres()
     {
         logo = true;
-        var t1 = new Transistor(1);
-
-        //ВИЗУАЛ ВИЗУАЛ ВИЗУАЛ
+        int n = (int)Vars.Val("Inputs");
+        double rc = Vars.Val("Rc");
         Console.Clear();
         "The project author is not a professional (yet), so there may be errors.\n".Print(DarkGray);
+        
         LogoMain();
-
         Console.Write("\n\n");
-
-        "[NOT gate under load]\n".Print();
-
-        $"Rc = {Rc:N0} Ohm".Print();
-        $"Rb = {t1.Rb:N0} Ohm\n".Print(t1.Rb < 0 ? Red : null);
-
+        $"[NOR gate, {n} inputs, under load]\n".Print();
+        $"Rc (shared) = {rc:N0} Ohm".Print();
         $"Vcc = {Vcc:0.00}V".Print(Cyan);
-        $"Beta = {t1.Beta}".Print();
-        $"k = {t1.k}\n".Print();
-
         $"V_in = {Vin:0.00}V".Print(Cyan);
         $"V_in calc = {VinCalc:0.00}V (-10%)\n".Print(DarkGray);
-
-        $"V_be = {t1.Vbe:0.00}V".Print();
-        $"V_ce(sat) = {t1.Vcesat:0.00}V\n".Print();
-
-        $"I_c = {t1.Icsat.FormatCurrent()}".Print();
-        $"I_b = {t1.Ibsat.FormatCurrent()}\n".Print();
-
+        for (int i = 1; i <= n; i++)
+        {
+            var t = new Transistor(i);
+            $"T{i}: Beta = {t.Beta}, k = {t.k}, Rb = {t.Rb:N0} Ohm, V_be = {t.Vbe:0.00}V, V_ce(sat) = {t.Vcesat:0.00}V, I_b = {t.Ibsat.FormatCurrent()}".Print(t.Rb < 0 ? Red : null);
+        }
         PrintLoadTable();
-
         PrintThermalTable();
-
-        double Pgate = Prc + t1.Prb + t1.Ptr;
-        $"\nP_Rc = {Prc.FormatPower()}".Print();
-        $"P_Rb = {t1.Prb.FormatPower()}".Print();
-        $"P_tr = {t1.Ptr.FormatPower()}".Print();
-        $"P_gate = {Pgate.FormatPower()}".Print();
-
+        double tRc = Tamb + Vars.Val("P_rc") / DRes;
+        $"P_Rc = {Vars.Val("P_rc").FormatPower()}  T_Rc = {tRc:F1} C".Print(tRc >= Tover ? Red : tRc >= Trated ? Yellow : null);
         $"\nI_ol = {Iol.FormatCurrent()}".Print();
         $"I_ol spare = {IolSpare.FormatCurrent()}".Print();
         $"I_il = {Iil.FormatCurrent()}\n".Print();
-
-        $"V_ol = {Vol:0.00}V".Print(Vol >= Vil ? Red : null);
-        $"V_ih = {Vih:0.00}V".Print(Vih >= Voh ? Red : null);
-        $"V_il = {Vil:0.00}V\n".Print(Vol >= Vil ? Red : null);
-
+        $"V_ol (one on) = {Vol:0.00}V".Print(Vol >= Vil ? Red : null);
+        $"V_ih (worst) = {Vih:0.00}V".Print(Vih >= Voh ? Red : null);
+        $"V_il = {Vil:0.00}V\n".Print();
         $"Nm_l = {NmL:0.00}V".Print(NmL < 0.0 ? Red : null);
-
         $"Fan-Out = {FO}".Print(FO >= FOreq ? Green : Red);
-
         $"\n\n".Print();
-
         while (true)
         {
-            "\nSave project and exit to menu? (y/n): ".Print(line: false); 
+            "\nSave project and exit to menu? (y/n): ".Print(line: false);
             string ans = Console.ReadLine()?.Trim().ToLower() ?? "";
-
-            if (ans == "n") 
+            if (ans == "n") break;
+            if (ans == "y")
             {
-                break;
-            }
-
-            if (ans == "y") {
                 Console.Clear();
                 LogoMain();
                 "\n".Print();
                 SaveProject();
                 break;
             }
-
             "Invalid choice. Type 'y' for Yes.".Print(ConsoleColor.Yellow);
         }
-
-
     }
 }
