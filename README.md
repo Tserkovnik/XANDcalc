@@ -1,217 +1,183 @@
-<div align="center">
-
-# 💻 XANDcalc
-
-**A console engineering calculator for resistor–transistor logic (RTL).**
-**Консольный инженерный калькулятор резисторно-транзисторной логики (RTL).**
-
-[![Release](https://img.shields.io/github/v/release/Tserkovnik/XANDcalc)](https://github.com/Tserkovnik/XANDcalc/releases/latest)
-[![License](https://img.shields.io/github/license/Tserkovnik/XANDcalc)](LICENSE)
-
-[English](#english) | [Русский](#russian)
-
-</div>
-
----
-
-<a name="english"></a>
-## English
-
-XANDcalc is a console engineering calculator for **resistor–transistor logic (RTL)**.
-It was originally created for the *Create: Power Grid* mod (Minecraft), but it is
-fully applicable to real-world electronics as well. The program computes the base
-resistor (R_b) a gate needs, together with all of its electrical parameters.
-
-### Inputs
-
-| Symbol  | Meaning                            |
-|---------|------------------------------------|
-| `Vcc`   | Supply voltage                     |
-| `Rc`    | Collector resistor                 |
-| `Beta`   | Transistor DC current gain (beta)  |
-| `k`     | Base overdrive / saturation factor |
-| `FOreq` | Required fan-out                   |
-
-### Current features
-
-- **NOT gate (RTL) calculation:**
-  - collector & base saturation currents (I_C, I_B);
-  - base resistor R_b selection for the required fan-out;
-  - logic levels: V_OH, V_OL, V_IH, V_IL;
-  - sink/source and other currents: I_OH, I_OL, I_IH, I_IL;
-  - noise margins NM_H / NM_L;
-  - fan-out check against the required value.
-- **Load table** — the same gate at N = 0 (voltmeter), N = 1 and N = FO_req:
-  watch V_OH and the margins degrade as the load grows; marginal cells are
-  highlighted in color.
-- **Smart output** — automatic current formatting (A → mA → µA → nA → pA);
-  red/green highlighting for impossible and healthy operating points.
-- **Convenient recalculation** — values entered earlier in the session become
-  the defaults; press `Enter` to keep them.
-
-### The math inside
-
-```text
-I_C(sat) = (V_CC − V_CE(sat)) / R_C
-I_B(req) = I_C(sat) · k_sat / β
-R_b      = (V_in − V_BE) / I_B(req) − N · R_C
-V_OH(N)  = (R_b·V_CC + N·R_C·V_BE) / (R_b + N·R_C)
-V_IH     = V_BE + I_B(req) · R_b
-NM_H     = V_OH − V_IH        NM_L = V_IL − V_OL
-FO       = floor( I_OH / I_IH )
-```
-
-
-### Controls
-
-| Input      | Meaning                       |
-|------------|-------------------------------|
-| `<number>` | set the parameter             |
-| `0`        | one step back (exit at first) |
-| `x` / `q`  | exit to the main menu         |
-| `Enter`    | skip, keep the current value  |
-| `a`        | auto Vin                      |
-
-### How to run
-
-**Release build (Windows x64):**
-1. Download `XANDcalc.exe` from [Releases](https://github.com/Tserkovnik/XANDcalc/releases/latest).
-2. Run it. No installation, no dependencies (self-contained).
-
-**From source:**
-```bash
-git clone https://github.com/Tserkovnik/XANDcalc.git
-cd XANDcalc/src
-dotnet run
-```
-Requires .NET 10+.
-
-### Roadmap
-
-- [x] NOT gate
-- [ ] Save / load projects to/from `.txt`
-- [ ] Power consumption
-- [ ] NOR gate
-- [ ] NAND gate
-- [ ] Arbitrary gates with series/parallel NPN connections
-- [ ] hFE variation with temperature and other conditions
-- [ ] More features
-- [ ] PNP ???
-
-**More ideas than plans:**
-- [ ] Comparison table of several configurations
-- [ ] Rounding results to real E24 nominals
-
-### Contributing
-
-The project is open to suggestions! Want to add AND / OR / NAND / NOR gates,
-improve the visuals, or refine the calculation model? Open an issue or a pull request.
-
-### Note
-All code comments will remain in Russian for now.
-
-### License
-
-GPL-3.0 — see [LICENSE](LICENSE).
-
----
-
 <a name="russian"></a>
 ## Русский
 
-XANDcalc — консольный инженерный калькулятор **резисторно-транзисторной логики (RTL)**.
-Первоначально создан для мода *Create: Power Grid* (Minecraft), но также полностью
-применим для расчёта реальной электроники. Программа рассчитывает необходимый
-базовый резистор (R_b) гейта и все его электрические параметры.
+XANDcalc — консольный инженерный калькулятор **резисторно-транзисторной логики (RTL)**. Программа предназначена для точного расчёта параметров дискретной полупроводниковой электроники и внутриигровых схем модификации *Create: Power Grid* (Minecraft). На основе физических параметров транзисторов калькулятор вычисляет необходимый номинал базового резистора (\(R_b\)), формирует таблицы статических нагрузок и оценивает тепловой баланс кристаллов.
 
 ### Входные данные
 
-| Обозначение | Значение                                        |
-|-------------|-------------------------------------------------|
-| `Vcc`       | Напряжение питания                              |
-| `Rc`        | Коллекторный резистор                           |
-| `Beta`       | Коэффициент усиления транзистора по току (beta) |
-| `k`         | Коэффициент перегрузки/насыщения базы           |
-| `FOreq`     | Требуемый fan-out (разветвление по выходу)      |
+| Обозначение | Значение                                                        |
+|-------------|-----------------------------------------------------------------|
+| `Vcc`       | Напряжение питания схемы                                        |
+| `Rc`        | Сопротивление коллекторного резистора                           |
+| `Beta`      | Статический коэффициент усиления транзистора по току (β)  |
+| `k`         | Коэффициент перегрузки (насыщения) базы                         |
+| `FOreq`     | Требуемый коэффициент разветвления по выходу (fan-out)          |
+| `Inputs`    | Количество входов логического элемента                          |
+| `T_amb`     | Температура окружающей среды (расчёт по климатическим биомам)   |
 
 ### Текущие возможности
 
-- **Расчёт NOT-гейта (RTL):**
-  - токи насыщения коллектора и базы (I_C, I_B);
-  - подбор базового резистора R_b под требуемый fan-out;
-  - логические уровни: V_OH, V_OL, V_IH, V_IL;
-  - sink/source и прочие токи: I_OH, I_OL, I_IH, I_IL;
-  - запасы помехоустойчивости NM_H / NM_L;
-  - проверка fan-out относительно требуемого.
-- **Таблица нагрузок** — один и тот же гейт при N = 0 (вольтметр), N = 1 и
-  N = FO_req: видно, как деградируют V_OH и запасы с ростом нагрузки;
-  плохие ячейки подсвечиваются цветом.
-- **Умный вывод** — автоформат токов (А → мА → мкА → нА → пА); красный/зелёный
-  для невозможных и здоровых режимов.
-- **Удобный перерасчёт** — значения, введённые ранее в течение сеанса, становятся
-  значениями по умолчанию: нажмите `Enter`, чтобы оставить их.
+- **Расчёт универсального гибрида NOT / Wired NOR:**
+  - Автоматический подбор номинала \(R_b\) с учётом распределения токов в многовходовой базе;
+  - Определение реальных статических токов насыщения коллектора и базы (\(I_C\), \(I_B\));
+  - Фиксация критического падения логических уровней и запасов помехоустойчивости при росте числа входов.
+- **Моделирование сложных вентилей (NAND / NOR):**
+  - Послойный расчёт последовательных транзисторных структур с вычислением плавающих потенциалов эмиттеров;
+  - Параллельное объединение каскадов.
+- **Стационарный тепловой расчёт (Steady Case):**
+  - Оценка рассеиваемой мощности на каждом резисторе и полупроводниковом переходе по закону Джоуля-Ленца;
+  - Моделирование худшего теплового сценария (одновременная подача логических «1» на все входы).
+- **Инструменты интеграции:**
+  - Интерактивная таблица деградации параметров при N = 0, N = 1 и \(N = FO_{req}\);
+  - Автономная система сохранения и загрузки проектов в файлы `.xand` с использованием инвариантной культуры.
 
-### Математика внутри
+> [!IMPORTANT]
+> Расчёт логических уровней и нагрузочной способности производится исходя из конвенции полной однородности среды: предполагается, что к выходам и входам исследуемого элемента подключены идентичные ему RTL-вентили.
 
-```text
-I_C(sat) = (V_CC − V_CE(sat)) / R_C
-I_B(req) = I_C(sat) · k_sat / β
-R_b      = (V_in − V_BE) / I_B(req) − N · R_C
-V_OH(N)  = (R_b·V_CC + N·R_C·V_BE) / (R_b + N·R_C)
-V_IH     = V_BE + I_B(req) · R_b
-NM_H     = V_OH − V_IH        NM_L = V_IL − V_OL
-FO       = floor( I_OH / I_IH )
+### Математический аппарат
+
+<details>
+<summary>Развернуть полный свод физических и тепловых формул</summary>
+
+#### 1. Общие константы и уравнения транзистора (Модель Эберса-Молла и Шокли)
+Напряжение насыщения коллектор-эмиттер \(V_{CE(sat)}\), ток насыщения коллектора \(I_{C(sat)}\) и минимально необходимый ток базы \(I_{B(req)}\):
+```math
+V_{CE(sat)} = V_t \(\cdot \ln\left( \frac{\frac{\beta}{\beta_R} + k \cdot \left(1 + \frac{1}{\beta_R}\right)}{k - 1} \right) \%\%\)MAGIT_PARSER_PROTECT%%```
+```math
+I_{C(sat)} \(= \frac{V_{CC} - V_{CE(sat)}}{R_C}, \quad I_{B(req)} = \frac\){I_{C(sat)} \(\cdot\) k}\({\beta} \%\%\)MAGIT_PARSER_PROTECT%%```
+
+Реальное падение напряжения на переходе база-эмиттер \(V_{BE}\) (уравнение Шокли с учётом падения на объёмном омическом сопротивлении эмиттера \(R_s\)):
+```math
+V_{BE} = V_t \(\cdot \ln\left(\frac{I_{C(sat)}}{I_s} + 1\right) + I_{C(sat)} \cdot \left(1 + \frac{1}{\beta}\right) \cdot\) R_s
 ```
+
+---
+
+#### 2. Вентиль NOT / Резисторный Wired NOR (Один общий транзистор)
+Расчёт базового резистора \(R_b\) с учётом шунтирования базы \((n-1)\) закрытыми входами соседей и системной нагрузки каскада \(FO_{req}\):
+```math
+V_{eff} = (V_{in} \(\cdot 0.9\)) \(- n \cdot V_{BE} + (n - 1) \cdot\) V_{OL}
+```
+```math
+R_b \(= \frac{V_{eff}}{I_{B(req)}} - R_C \cdot\) FO_{req}
+```
+
+Входные пороги переключения элементов (\(V_{IH}\) худшего случая утечки, порог запирания \(V_{IL}\)):
+```math
+V_{IH} = n \(\cdot V_{BE} - (n - 1) \cdot V_{OL} + I_{B(req)} \cdot\) R_b
+```
+```math
+V_{IL} = V_t \(\cdot \ln\left( \frac{V_t}{R_C \cdot I_s} \right) \%\%\)MAGIT_PARSER_PROTECT%%```
+
+Выходной высокий уровень \(V_{OH}\) гейта под произвольной статической нагрузкой из \(N\) элементов и втекающий ток единицы \(I_{IH}\):
+```math
+V_{OH}(N) \(= \frac{R_b \cdot V_{CC} + N \cdot R_C \cdot V_{BE}}{R_b + N \cdot R_C}, \quad I_{IH} = \frac\){V_{OH} - V_{BE}}{R_b + R_C}
+```
+
+---
+
+#### 3. Вентиль NOR (Общий Rc, параллельные транзисторы)
+Худший случай включения — открыт строго **один** транзистор (он в одиночку стягивает весь ток общего коллекторного \(R_c\)):
+```math
+R_{b(i)} \(= \frac{(V_{in} \cdot 0.9) - V_{BE(i)}}{I_{B(req)(i)}} - R_C \cdot\) FO_{req}
+```
+```math
+V_{OH}(N) \(= \frac{R_{b(worst)} \cdot V_{CC} + N \cdot R_C \cdot V_{BE(worst)}}{R_{b(worst)} + N \cdot R_C}, \quad I_{IH} = \frac\){V_{OH} - V_{BE(worst)}}{R_{b(worst)} + R_C}
+```
+```math
+V_{IH} \(= \max_{i} \left\)( V_{BE(i)} + I_{B(req)(i)} \(\cdot R_{b(i)} \right\))
+```
+
+---
+
+#### 4. Вентиль NAND (Транзисторный стек / Последовательное соединение)
+Потенциал эмиттера каждого транзистора в стопке \(V_{e(i)}\) определяется суммой \(V_{CE(sat)}\) всех транзисторов, находящихся ниже него по цепи до земли. Ток коллектора нижних транзисторов растёт из-за суммирования базовых токов верхних каскадов:
+```math
+V_{e(i)} \(= \sum_{j=i+1}^{n} V_{CE(sat)(j)}, \quad I_{C(sat)(i)} = I_{C(sat)(top)} + \sum_\){j=1}^{i-1} I_{B(req)(j)}
+```
+Расчёт индивидуального \(R_{b(i)}\) для каждого входа стека с учётом динамического подъёма эмиттеров:
+```math
+R_{b(i)} \(= \frac{(V_{in} \cdot 0.9) - V_{e(i)} - V_{BE(i)}}{I_{B(req)(i)}} - R_C \cdot\) FO_{req}
+```
+Порог переключения каскада \(V_{IH}\):
+```math
+V_{IH} \(= \max_{i} \left\)( V_{e(i)} + V_{BE(i)} + I_{B(req)(i)} \(\cdot R_{b(i)} \right\))
+```
+
+---
+
+#### 5. Выходные токи, коэффициент разветвления (Fan-Out) и запасы помехоустойчивости
+```math
+I_{OH} \(= \frac{V_{CC} - V_{OH}}{R_C}, \quad I_{OL} = \frac{V_{CC} - V_{OL}}{R_C}, \quad I_{OL(spare)} = I_{C(sat)} \cdot \)(k_{min} - 1)
+```
+```math
+FO \(= \left\lfloor \frac{I_{OH}}{I_{IH}} \right\rfloor, \quad NM_H = V_{OH} - V_{IH}, \quad\) NM_L = V_{IL} - V_{OL}
+```
+
+---
+
+#### 6. Стационарный тепловой расчёт (Worst Case Steady-State)
+Тепловыделение на резисторах и кристаллах транзисторов при максимальной токовой нагрузке (на всех входах логическая «1»), а также результирующие температуры элементов:
+```math
+P_{Rc} = I_{OL}\(^2 \cdot R_C, \quad P_{Rb} = \left(\frac{V_{CC} - V_{BE}}{R_b + R_C}\right)^2 \cdot\) R_b
+```
+```math
+P_{tr} = V_{CE(sat)} \(\cdot I_{C(sat)} + V_{BE} \cdot \left\)(n \(\cdot \frac{V_{CC} - V_{BE}}{R_b + R_C}\right\))
+```
+```math
+T_{Rc} = T_{amb} \(+ \frac{P_{Rc}}{D_{Res}}, \quad T_{Rb} = T_{amb} + \frac{P_{Rb}}{D_{Res}}, \quad T_{tr} = T_{amb} + \frac\){P_{tr}}{D_{Tr}}
+```
+</details>
 
 
 ### Управление
 
-| Ввод            | Значение                              |
-|-----------------|---------------------------------------|
-| `<число>`       | установить параметр                   |
-| `0`             | шаг назад (на первом — выход)         |
-| `x` / `q` / `ч` | выход в главное меню                  |
-| `Enter`         | пропустить, оставить текущее значение |
-| `a`             | автоматический Vin                    |
+| Ввод            | Значение                                                |
+|-----------------|---------------------------------------------------------|
+| `<число>`       | Установить значение выбранного параметра                |
+| `0`             | Шаг назад по этапам ввода (на первом этапе — выход)     |
+| `x` / `q` / `ч` | Немедленный возврат в главное меню программы            |
+| `Enter`         | Пропустить шаг, сохранив текущее значение по умолчанию  |
+| `a`             | Переключить расчёт напряжения Vin в автоматический режим|
 
 ### Как запустить
 
 **Релизная сборка (Windows x64):**
-1. Скачать `XANDcalc.exe` из [Releases](https://github.com/Tserkovnik/XANDcalc/releases/latest).
-2. Запустить. Установка и зависимости не нужны (self-contained).
+1. Перейдите в раздел [Releases](https://github.com) и скачайте файл `XANDcalc.exe`.
+2. Запустите файл. Сборка является портативной (self-contained) и не требует установки зависимостей или среды выполнения.
 
-**Из исходников:**
+**Сборка из исходного кода:**
 ```bash
-git clone https://github.com/Tserkovnik/XANDcalc.git
+git clone https://github.com
 cd XANDcalc/src
-dotnet run
+dotnet run -r win-x64
 ```
-Нужен .NET 10+.
+> [!NOTE]
+> Для компиляции исходного кода требуется установленный SDK **.NET 10+**.
 
-### Планы
+### План разработки (Roadmap)
 
-- [x] NOT гейт
-- [ ] Сохранение / загрузка проектов в/из `.txt`
-- [ ] Энергопотребление
-- [ ] NOR гейт
-- [ ] NAND гейт
-- [ ] Расчёт произвольных гейтов с последовательными и параллельными соединениями NPN
-- [ ] Расчёт изменения hFE в зависимости от температуры и прочих условий
-- [ ] Больше возможностей
-- [ ] PNP ???
-
-**Больше идеи, чем планы:**
-- [ ] Таблица сравнения нескольких конфигураций
-- [ ] Округление результатов до реальных номиналов E24
+- [x] Расчёт базового NOT-инвертора
+- [x] Автоматическое сохранение и чтение проектов в файлы `.xand`
+- [x] Расчёт потребляемой мощности элементов
+- [x] Расчёт многовходовых вентилей NOR (Wired-база и многотранзисторные схемы)
+- [x] Расчёт вентилей NAND (последовательный транзисторный стек)
+- [x] Моделирование тепловых режимов работы и зависимости от биомов
+- [ ] Округление расчётных сопротивлений до стандартных номинальных рядов E24
+- [ ] Интеграция общей сравнительной таблицы конфигураций в консольный интерфейс
+- [ ] Добавление математических моделей для PNP-структур
 
 ### Содействие
 
-Проект открыт предложениям! Хотите добавить AND / OR / NAND / NOR гейты, улучшить
-визуал или уточнить модель расчёта? Открывайте issue и pull request.
+Репозиторий открыт для pull-request и предложений по уточнению физических моделей. Если вы хотите предложить изменения в алгоритмах расчёта или консольной графике, создайте новую задачу (Issue).
 
 ### Примечание
-Все комментарии к коду пока что останутся на русском.
+Все комментарии внутри исходного кода программы остаются строго на русском языке.
+
+### Об использовании ИИ
+ДА, в проекте использовался ИИ, но не для бездумного "вайбкодинга". Весь код перепроверен человеком, весь код встраивался человеком. 
+Это никак не влияет на работу прогроммы.ы
 
 ### Лицензия
 
-GPL-3.0 — см. [LICENSE](LICENSE).
+Проект распространяется под свободной лицензией **GPL-3.0** — подробные условия изложены в файле [LICENSE](LICENSE).
