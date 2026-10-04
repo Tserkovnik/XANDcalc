@@ -349,11 +349,11 @@ XANDcalc — консольный инженерный калькулятор р
 
 $$
 V_{CE(sat)} = V_t \cdot \ln\left(
-  \frac{
-    \frac{\beta}{\beta_R} + k \cdot \left(1 + \frac{1}{\beta_R}\right)
-  }{
-    k - 1
-  }
+\frac{
+\frac{\beta}{\beta_R} + k \cdot \left(1 + \frac{1}{\beta_R}\right)
+}{
+k - 1
+}
 \right)
 $$
 
