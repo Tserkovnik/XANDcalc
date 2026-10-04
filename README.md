@@ -249,13 +249,13 @@ $$
 
 ### Release build (Windows x64):
 
-1. Go to the [Releases](https://github.com) section and download the `XANDcalc.exe` file.
+1. Go to the [Releases](https://github.com/Tserkovnik/XANDcalc/releases) section and download the `XANDcalc.exe` file.
 2. Run it. The build is portable (self-contained) and requires no dependency or runtime installation.
 
 ### Building from source:
 
 ```bash
-git clone https://github.com
+git clone git clone https://github.com/Tserkovnik/XANDcalc.git
 cd XANDcalc/src
 dotnet run -r win-x64
 ```
@@ -358,9 +358,10 @@ k - 1
 $$
 
 $$
-I_{C(sat)} = \frac{V_{CC} - V_{CE(sat)}}{R_C},
-\quad
-I_{B(req)} = \frac{I_{C(sat)} \cdot k}{\beta}
+V_{BE} =
+V_t \cdot \ln\left(\frac{I_{C(sat)}}{I_s} + 1\right)
++
+I_{C(sat)} \cdot \left(1 + \frac{1}{\beta}\right) \cdot R_s
 $$
 
 Реальное падение напряжения на переходе база-эмиттер `V_BE` (уравнение Шокли с учётом падения на объёмном омическом сопротивлении эмиттера `R_s`):
@@ -541,13 +542,13 @@ $$
 
 ### Релизная сборка (Windows x64):
 
-1. Перейдите в раздел [Releases](https://github.com) и скачайте файл `XANDcalc.exe`.
+1. Перейдите в раздел [Releases](https://github.com/Tserkovnik/XANDcalc/releases) и скачайте файл `XANDcalc.exe`.
 2. Запустите файл. Сборка является портативной (self-contained) и не требует установки зависимостей или среды выполнения.
 
 ### Сборка из исходного кода:
 
 ```bash
-git clone https://github.com
+git clone git clone https://github.com/Tserkovnik/XANDcalc.git
 cd XANDcalc/src
 dotnet run -r win-x64
 ```
