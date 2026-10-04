@@ -24,6 +24,7 @@ class NOTgate
     {
         Vars.Declare("Vcc", 5.0, "V", "all");
         Vars.Declare("Required Fan-Out", 8, "Natural number", "all");
+        Vars.Declare("Inputs", 1, "Natural number", "n"); // G A Y ? ? ?
         Vars.Declare("Vin", 5.0, "V", "all");
         Vars.Declare("Rc", 470.0, "Ohm", "all");
         Vars.Declare("T_amb", 18.0, "C", "biome");   // расчётный биом по умолчанию = равнины
@@ -165,10 +166,35 @@ class NOTgate
     {
         logo = true;
         Gate = "NOT";
-        DeclareNOT(); if (!ChooseBiome()) return;
+
+        DeclareNOT();
+        "\n[NOR] [x=menu]".Print();
+        bool flag = true;
+        
+        while (flag)
+            switch(ReadNumber($"Number of inputs (now {NumIn}) (N=1 for NOT) [0=exit]: ", out double n))
+            {
+                case ReadResult.Number:
+                    if (n < 1 || n != Math.Floor(n)) { "Whole number >= 1".Print(Yellow); break; }
+                    NumIn = n;
+                    flag = false;
+                    break;
+                    
+                case ReadResult.Back: case ReadResult.Exit:
+                    return;
+
+                case ReadResult.Auto: case ReadResult.Retry:
+                    break;
+
+                case ReadResult.Skip:
+                    flag = false;
+                    break;
+            }
+
+        if (!ChooseBiome()) return;
 
         Console.Clear();
-        Console.WriteLine("\n[NOT] [x=menu]");
+        if (NumIn == 1) Console.WriteLine("\n[NOT] [x=menu]"); else $"\n[wired NOR{NumIn}] [x=menu]".Print();
 
         var filteredParams = Vars.Order.Where(p => p.Kind == "in" && (p.Tag == "all" || p.Tag == "t1")).ToList();
 
@@ -238,35 +264,42 @@ class NOTgate
         //№3 Ток базы, мин
         t1.Ibsat = t1.Icsat/t1.Beta*t1.k;
 
+        Vol = t1.Vcesat;
+
         //№4 Базовый резистор
         VinCalc = Vin * 0.9;
-        t1.Rb = (VinCalc - t1.Vbe)/t1.Ibsat - Rc*FOreq;
+
+        int n = (int)Vars.Val("Inputs");
+        double vEffective = VinCalc - n * t1.Vbe + (n - 1) * Vol;
+        t1.Rb = vEffective / t1.Ibsat - Rc * FOreq;
 
         //ПАРАМЕТРЫ гейта под нагрузкой
 
         Voh = (t1.Rb*Vcc + FOreq*Rc*t1.Vbe)/(t1.Rb+FOreq*Rc);
-        Vol = t1.Vcesat;
 
-        Vih = t1.Vbe + t1.Ibsat*t1.Rb;
-        Vil = Vt * Math.Log(Vt / (Rc * Is));  // зависит от Rc
+        Vil = Vt * Math.Log(Vt / (Rc * Is));  //зависит от Rc
 
         Ioh = (Vcc - Voh)/Rc;//sourse current
+        Iih = (Voh - t1.Vbe) / (t1.Rb + Rc);
 
-        Iol = (Vcc - t1.Vcesat) / Rc;      // РЕАЛЬНЫЙ ток стока в "0" (= Icsat)
-        IolSpare = t1.Icsat * (t1.k - 1);  // ЗАПАС: сколько ещё можно слить, оставаясь в насыщении
+        Iol = (Vcc - t1.Vcesat) / Rc;      //РЕАЛЬНЫЙ ток стока в "0" (= Icsat)
+        IolSpare = t1.Icsat * (t1.k - 1);  //ЗАПАС: сколько ещё можно слить, оставаясь в насыщении
     
 
-        Iih = (Voh - t1.Vbe)/(t1.Rb+Rc);
+        Vih = n * t1.Vbe - (n - 1) * Vol + t1.Ibsat * t1.Rb;
 
         FO = (int)(Ioh/Iih);
 
         NmL = Vil - Vol;
         NmH = Voh - Vih;
 
-        // тепло: Джоуль-Ленц на резисторах + оба перехода транзистора
+        double ibMaxOne = (Vcc - t1.Vbe) / (t1.Rb + Rc); 
         Prc = t1.Icsat * t1.Icsat * Rc;
-        t1.Prb = t1.Ibsat * t1.Ibsat * t1.Rb;
-        t1.Ptr = t1.Vcesat * t1.Icsat + t1.Vbe * t1.Ibsat;
+        t1.Prb = ibMaxOne * ibMaxOne * t1.Rb;
+
+        //транзистор греется от суммарного тока всех n входов
+        t1.Ptr = t1.Vcesat * t1.Icsat + t1.Vbe * (n * ibMaxOne); 
+
 
 
         NOTres();
@@ -284,7 +317,9 @@ class NOTgate
 
         Console.Write("\n\n");
 
-        "[NOT gate under load]\n".Print();
+        int n = (int)Vars.Val("Inputs");
+        if (n == 1) "[NOT gate under load]\n".Print(); 
+        else $"[Wired NOR gate ({n} inputs) under load]\n".Print();
 
         $"Rc = {Rc:N0} Ohm".Print();
         $"Rb = {t1.Rb:N0} Ohm\n".Print(t1.Rb < 0 ? Red : null);

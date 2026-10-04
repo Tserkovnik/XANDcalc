@@ -17,6 +17,7 @@ class Transistor
     public double Vcesat { get => Vars.Val($"Vcesat{I}"); set => Vars.Set($"Vcesat{I}", value); }
     public double Icsat  { get => Vars.Val($"Icsat{I}");  set => Vars.Set($"Icsat{I}", value); }
     public double Ibsat  { get => Vars.Val($"Ibsat{I}");  set => Vars.Set($"Ibsat{I}", value); }
+    public double Ve { get => Vars.Val($"Ve{I}"); set => Vars.Set($"Ve{I}", value); }
     public double Prb { get => Vars.Val($"Prb{I}"); set => Vars.Set($"Prb{I}", value); }
     public double Ptr { get => Vars.Val($"Ptr{I}"); set => Vars.Set($"Ptr{I}", value); }
 

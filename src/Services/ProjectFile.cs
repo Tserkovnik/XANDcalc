@@ -14,6 +14,8 @@ static class ProjectFile
         switch (Vars.Gate)
         {
             case "NOT": CalcNOT(); break;
+            case "NOR": CalcNOR(); break;
+            case "NAND": CalcNAND(); break;
             default: $"This build doesn't know gate '{Vars.Gate}' yet.".Print(Red); break;
         }
     }
@@ -34,8 +36,22 @@ static class ProjectFile
         sb.AppendLine($"# saved {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
         sb.AppendLine($"VinAuto = {Vars.VinAuto}");
         foreach (var p in Vars.Order)
-            if (p.Kind == "in")
-                sb.AppendLine($"{p.Name} = {p.Value.ToString("R", CultureInfo.InvariantCulture)}");
+        {
+            if (p.Kind != "in") continue;
+
+            //если мы сохраняем NOT, у него всегда только 1 транзистор
+            if (Vars.Gate == "NOT" && p.Tag.StartsWith("t") && p.Tag != "t1") continue;
+
+            //если сохраняем NOR или NAND, пишем только те транзисторы, индексы которых не превышают инпуты
+            if ((Vars.Gate == "NOR" || Vars.Gate == "NAND") && p.Tag.StartsWith("t"))
+            {
+                int tIndex = int.Parse(p.Tag[1..]);
+                if (tIndex > (int)Vars.NumIn) continue;
+            }
+
+            sb.AppendLine($"{p.Name} = {p.Value.ToString("R", CultureInfo.InvariantCulture)}");
+        }
+
         sb.AppendLine("# --- results at save time (info only) ---");
         foreach (var p in Vars.Order)
             if (p.Kind == "out")
@@ -66,7 +82,15 @@ static class ProjectFile
             if (Vars.Get(name).Kind != "in") continue;  // расчётные из файла не перезаписываем
             bool ok = double.TryParse(val, NumberStyles.Float, CultureInfo.InvariantCulture, out double v)
                    || double.TryParse(val, NumberStyles.Float, CultureInfo.CurrentCulture, out v);
-            if (ok) { Vars.Set(name, v); n++; }
+            if (ok) 
+            {
+                Vars.Set(name, v); n++;
+                
+                if (name == "Inputs") 
+                {
+                    DeclareForGate(Vars.Gate);
+                }
+            }
         }
         return n;
     }
@@ -85,7 +109,8 @@ static class ProjectFile
         switch (gate)
         {
             case "NOT": NOTgate.DeclareNOT(); break;
-            // case "NOR": NORgate.DeclareNOR(); break;   // сюда сами встанут новые гейты
+            case "NOR": NORgate.DeclareNOR(); break;   
+            case "NAND": NANDgate.DeclareNAND(); break; 
         }
     }
 }

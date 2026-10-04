@@ -6,6 +6,7 @@ global using static XANDcalc.ProjectFile;
 
 global using static XANDcalc.NOTgate;
 global using static XANDcalc.NORgate;
+global using static XANDcalc.NANDgate;
 
 global using static XANDcalc.Validation;
 global using static XANDcalc.CalculationRow;

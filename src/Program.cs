@@ -113,15 +113,6 @@ class XAND {
         return System.IO.Path.Combine(ProjectFile.Folder, s);
     }
 
-    public static void OpenGate()
-    {
-        switch (Vars.Gate)
-        {
-            case "NOT": NOTgate.NOTchoice(); break;
-            default: $"This build doesn't know gate '{Vars.Gate}' yet.".Print(Red); break;
-        }
-    }
-
     [System.STAThread]
     static void Main(string[] args)
     {
@@ -149,11 +140,12 @@ class XAND {
 
             logo = false;
             Console.WriteLine("\n0. Exit/Stop");
-            Console.WriteLine("1. NOT gate");
+            Console.WriteLine("\n1. NOT/wired_NOR gate");
             "2. NOR gate".Print();
-            "3. Save project".Print();
-            "4. Load project".Print();
-            "5. Biome table".Print();
+            "3. NAND gate".Print();
+            "\n4. Save project".Print();
+            "5. Load project".Print();
+            "\n6. Biome table".Print();
 
             Console.Write("\nInput: ");
 
@@ -186,21 +178,25 @@ class XAND {
                     NORchoice();
                     break;
 
-                case "3": case "save":
+                case "3": case "nand":
+                    NANDchoice();
+                    break;
+
+                case "4": case "save":
                     Console.Clear();
                     LogoMain();
                     "\n".Print();
                     SaveProject();
                     break;
 
-                case "4": case "load": 
+                case "5": case "load": 
                     Console.Clear();
                     LogoMain();
                     "\n".Print();
                     LoadProject();
                     break;
 
-                case "5": case "biomes":
+                case "6": case "biomes":
                     Console.Clear();
                     LogoMain();
                     Biomes.PrintReference();
