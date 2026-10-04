@@ -1,8 +1,10 @@
-`[English](#english) | [Русский](#russian)`
+# XANDcalc
 
-<a name="english"></a>
+[English](#english) | [Русский](#русский)
 
-English
+---
+
+## English
 
 XANDcalc is a console engineering calculator for resistor–transistor logic (RTL). It is designed for precise calculation of discrete semiconductor circuit parameters and in-game schematics for the Create: Power Grid modification (Minecraft). Based on the physical parameters of transistors, the calculator computes the required base resistor rating (Rb), builds static load tables and estimates the thermal balance of the dies.
 
@@ -292,12 +294,9 @@ This does not affect the operation of the program in any way.
 The project is distributed under the free GPL-3.0 license — see the [LICENSE](LICENSE) file for detailed terms.
 
 
+---
 
-
-
-<a name="russian"></a>
-
-Русский
+## Русский
 
 XANDcalc — консольный инженерный калькулятор резисторно-транзисторной логики (RTL). Программа предназначена для точного расчёта параметров дискретной полупроводниковой электроники и внутриигровых схем модификации Create: Power Grid (Minecraft). На основе физических параметров транзисторов калькулятор вычисляет необходимый номинал базового резистора (Rb), формирует таблицы статических нагрузок и оценивает тепловой баланс кристаллов.
 
