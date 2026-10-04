@@ -42,15 +42,13 @@ XANDcalc — консольный инженерный калькулятор **
 #### 1. Общие константы и уравнения транзистора (Модель Эберса-Молла и Шокли)
 Напряжение насыщения коллектор-эмиттер \(V_{CE(sat)}\), ток насыщения коллектора \(I_{C(sat)}\) и минимально необходимый ток базы \(I_{B(req)}\):
 ```math
-V_{CE(sat)} = V_t \cdot \ln\left( \frac{\frac{\beta}{\beta_R} + k \cdot \left(1 + \frac{1}{\beta_R}\right)}{k - 1} \right)
-```
+V_{CE(sat)} = V_t \(\cdot \ln\left( \frac{\frac{\beta}{\beta_R} + k \cdot \left(1 + \frac{1}{\beta_R}\right)}{k - 1} \right) \%\%\)MAGIT_PARSER_PROTECT%%```
 ```math
-I_{C(sat)} = \frac{V_{CC} - V_{CE(sat)}}{R_C}, \quad I_{B(req)} = \frac{I_{C(sat)} \cdot k}{\beta}
-```
+I_{C(sat)} \(= \frac{V_{CC} - V_{CE(sat)}}{R_C}, \quad I_{B(req)} = \frac\){I_{C(sat)} \(\cdot\) k}\({\beta} \%\%\)MAGIT_PARSER_PROTECT%%```
 
 Реальное падение напряжения на переходе база-эмиттер \(V_{BE}\) (уравнение Шокли с учётом падения на объёмном омическом сопротивлении эмиттера \(R_s\)):
 ```math
-V_{BE} = V_t \cdot \ln\left(\frac{I_{C(sat)}}{I_s} + 1\right) + I_{C(sat)} \cdot \left(1 + \frac{1}{\beta}\right) \cdot R_s
+V_{BE} = V_t \(\cdot \ln\left(\frac{I_{C(sat)}}{I_s} + 1\right) + I_{C(sat)} \cdot \left(1 + \frac{1}{\beta}\right) \cdot\) R_s
 ```
 
 ---
@@ -58,77 +56,76 @@ V_{BE} = V_t \cdot \ln\left(\frac{I_{C(sat)}}{I_s} + 1\right) + I_{C(sat)} \cdot
 #### 2. Вентиль NOT / Резисторный Wired NOR (Один общий транзистор)
 Расчёт базового резистора \(R_b\) с учётом шунтирования базы \((n-1)\) закрытыми входами соседей и системной нагрузки каскада \(FO_{req}\):
 ```math
-V_{eff} = (V_{in} \cdot 0.9) - n \cdot V_{BE} + (n - 1) \cdot V_{OL}
+V_{eff} = (V_{in} \(\cdot 0.9\)) \(- n \cdot V_{BE} + (n - 1) \cdot\) V_{OL}
 ```
 ```math
-R_b = \frac{V_{eff}}{I_{B(req)}} - R_C \cdot FO_{req}
+R_b \(= \frac{V_{eff}}{I_{B(req)}} - R_C \cdot\) FO_{req}
 ```
 
 Входные пороги переключения элементов (\(V_{IH}\) худшего случая утечки, порог запирания \(V_{IL}\)):
 ```math
-V_{IH} = n \cdot V_{BE} - (n - 1) \cdot V_{OL} + I_{B(req)} \cdot R_b
+V_{IH} = n \(\cdot V_{BE} - (n - 1) \cdot V_{OL} + I_{B(req)} \cdot\) R_b
 ```
 ```math
-V_{IL} = V_t \cdot \ln\left( \frac{V_t}{R_C \cdot I_s} \right)
-```
+V_{IL} = V_t \(\cdot \ln\left( \frac{V_t}{R_C \cdot I_s} \right) \%\%\)MAGIT_PARSER_PROTECT%%```
 
 Выходной высокий уровень \(V_{OH}\) гейта под произвольной статической нагрузкой из \(N\) элементов и втекающий ток единицы \(I_{IH}\):
 ```math
-V_{OH}(N) = \frac{R_b \cdot V_{CC} + N \cdot R_C \cdot V_{BE}}{R_b + N \cdot R_C}, \quad I_{IH} = \frac{V_{OH} - V_{BE}}{R_b + R_C}
+V_{OH}(N) \(= \frac{R_b \cdot V_{CC} + N \cdot R_C \cdot V_{BE}}{R_b + N \cdot R_C}, \quad I_{IH} = \frac\){V_{OH} - V_{BE}}{R_b + R_C}
 ```
 
 ---
 
 #### 3. Вентиль NOR (Общий Rc, параллельные транзисторы)
-Худший случай включения — открыт строго **один** транзистор (он в одиночку стягивает весь ток общего коллекторного \(R_c\)):
+Худший случай включения — открыт строго **один** транзистор (он в одиночку стягивает весь ток общего коллекторного \(R_C\)):
 ```math
-R_{b(i)} = \frac{(V_{in} \cdot 0.9) - V_{BE(i)}}{I_{B(req)(i)}} - R_C \cdot FO_{req}
+R_{b(i)} \(= \frac{(V_{in} \cdot 0.9) - V_{BE(i)}}{I_{B(req)(i)}} - R_C \cdot\) FO_{req}
 ```
 ```math
-V_{OH}(N) = \frac{R_{b(worst)} \cdot V_{CC} + N \cdot R_C \cdot V_{BE(worst)}}{R_{b(worst)} + N \cdot R_C}, \quad I_{IH} = \frac{V_{OH} - V_{BE(worst)}}{R_{b(worst)} + R_C}
+V_{OH}(N) \(= \frac{R_{b(i)} \cdot V_{CC} + N \cdot R_C \cdot V_{BE(i)}}{R_{b(i)} + N \cdot R_C}, \quad I_{IH} = \frac\){V_{OH} - V_{BE(g)}}{R_{b(g)} + R_C}
 ```
 ```math
-V_{IH} = \max_{i} \left( V_{BE(i)} + I_{B(req)(i)} \cdot R_{b(i)} \right)
+V_{IH} \(= \max_{i} \left\)( V_{BE(i)} + I_{B(req)(i)} \(\cdot R_{b(i)} \right\))
 ```
 
 ---
 
-#### 4. Вентиль NAND (Транзисторный стек / Послеводательное соединение)
+#### 4. Вентиль NAND (Транзисторный стек / Последовательное соединение)
 Потенциал эмиттера каждого транзистора в стопке \(V_{e(i)}\) определяется суммой \(V_{CE(sat)}\) всех транзисторов, находящихся ниже него по цепи до земли. Ток коллектора нижних транзисторов растёт из-за суммирования базовых токов верхних каскадов:
 ```math
-V_{e(i)} = \sum_{j=i+1}^{n} V_{CE(sat)(j)}, \quad I_{C(sat)(i)} = I_{C(sat)(top)} + \sum_{j=1}^{i-1} I_{B(req)(j)}
+V_{e(i)} \(= \sum_{j=i+1}^{n} V_{CE(sat)(j)}, \quad I_{C(sat)(i)} = I_{C(sat)(top)} + \sum_\){j=1}^{i-1} I_{B(req)(j)}
 ```
 Расчёт индивидуального \(R_{b(i)}\) для каждого входа стека с учётом динамического подъёма эмиттеров:
 ```math
-R_{b(i)} = \frac{(V_{in} \cdot 0.9) - V_{e(i)} - V_{BE(i)}}{I_{B(req)(i)}} - R_C \cdot FO_{req}
+R_{b(i)} \(= \frac{(V_{in} \cdot 0.9) - V_{e(i)} - V_{BE(i)}}{I_{B(req)(i)}} - R_C \cdot\) FO_{req}
 ```
-Порог переключения каскада \(V_{IH}\):
+Порог переключения каскада \(V_{IH}\) и уровень \(V_{OH}(N)\) по базовому транзистору:
 ```math
-V_{IH} = \max_{i} \left( V_{e(i)} + V_{BE(i)} + I_{B(req)(i)} \cdot R_{b(i)} \right)
+V_{IH} \(= \max_{i} \left( V_{e(i)} + V_{BE(i)} + I_{B(req)(i)} \cdot R_{b(i)} \right), \quad V_{OH}(N) = \frac\){R_{b(1)} \(\cdot V_{CC} + N \cdot R_C \cdot\) V_{BE(1)}}{R_{b(1)} + N \(\cdot\) R_C}
 ```
 
 ---
 
 #### 5. Выходные токи, коэффициент разветвления (Fan-Out) и запасы помехоустойчивости
 ```math
-I_{OH} = \frac{V_{CC} - V_{OH}}{R_C}, \quad I_{OL} = \frac{V_{CC} - V_{OL}}{R_C}, \quad I_{OL(spare)} = I_{C(sat)} \cdot (k_{min} - 1)
+I_{OH} \(= \frac{V_{CC} - V_{OH}}{R_C}, \quad I_{OL} = \frac{V_{CC} - V_{OL}}{R_C}, \quad I_{OL(spare)} = I_{C(sat)} \cdot \)(k_{min} - 1)
 ```
 ```math
-FO = \left\lfloor \frac{I_{OH}}{I_{IH}} \right\rfloor, \quad NM_H = V_{OH} - V_{IH}, \quad NM_L = V_{IL} - V_{OL}
+FO \(= \left\lfloor \frac{I_{OH}}{I_{IH}} \right\rfloor, \quad NM_H = V_{OH} - V_{IH}, \quad\) NM_L = V_{IL} - V_{OL}
 ```
 
 ---
 
 #### 6. Стационарный тепловой расчёт (Worst Case Steady-State)
-Тепловыделение на резисторах и кристаллах транзисторов при максимальной токовой нагрузке (на всех входах логическая «1»), а также результирующие температуры элементов:
+Тепловыделение на резисторах и кристаллах транзисторов при максимальной токовой нагрузке, а также результирующие температуры элементов:
 ```math
-P_{Rc} = I_{OL}^2 \cdot R_C, \quad P_{Rb} = \left(\frac{V_{CC} - V_{BE}}{R_b + R_C}\right)^2 \cdot R_b
+P_{Rc} = I_{OL}\(^2 \cdot R_C, \quad P_{Rb} = I_{B}^2 \cdot\) R_b
 ```
 ```math
-P_{tr} = V_{CE(sat)} \cdot I_{C(sat)} + V_{BE} \cdot \left(n \cdot \frac{V_{CC} - V_{BE}}{R_b + R_C}\right)
+P_{tr(NOT)} = V_{CE(sat)} \(\cdot I_{C(sat)} + V_{BE} \cdot (n \cdot I_B), \quad P_{tr(NAND/NOR)} = V_{CE(sat)} \cdot I_{C(sat)} + V_{BE} \cdot\) I_{B}
 ```
 ```math
-T_{Rc} = T_{amb} + \frac{P_{Rc}}{D_{Res}}, \quad T_{Rb} = T_{amb} + \frac{P_{Rb}}{D_{Res}}, \quad T_{tr} = T_{amb} + \frac{P_{tr}}{D_{Tr}}
+T_{Rc} = T_{amb} \(+ \frac{P_{Rc}}{D_{Res}}, \quad T_{Rb} = T_{amb} + \frac{P_{Rb}}{D_{Res}}, \quad T_{tr} = T_{amb} + \frac\){P_{tr}}{D_{Tr}}
 ```
 </details>
 
